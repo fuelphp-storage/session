@@ -1,0 +1,24 @@
+{
+	"name": "fuelphp/session",
+	"type": "library",
+	"description": ".",
+	"keywords": ["Sessions"],
+	"homepage": "https://github.com/fuelphp/session",
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "FuelPHP Development Team",
+			"email": "team@fuelphp.com"
+		}
+	],
+	"require": {
+		"php": ">=5.3.3"
+	},
+	"require-dev": {
+		"mockery/mockery": "0.7.*"
+	},
+	"autoload": {
+		"psr-0": { "FuelPHP\\Session": "src/" }
+	},
+	"minimum-stability": "dev"
+}
