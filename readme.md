@@ -1,1 +1,0 @@
-# FuelPHP Session library.
