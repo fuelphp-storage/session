@@ -32,30 +32,51 @@ class FuelServiceProvider extends ServiceProvider
 	);
 
 	/**
+	 * array of global session defaults
+	 */
+	protected $defaults = array(
+		'driver'                    => 'native',
+		'match_ip'                  => false,
+		'match_ua'                  => true,
+		'cookie_domain'             => '',
+		'cookie_path'               => '/',
+		'cookie_http_only'          => null,
+		'encrypt_cookie'            => true,
+		'expire_on_close'           => false,
+		'expiration_time'           => 7200,
+		'rotation_time'             => 300,
+		'flash_id'                  => 'flash',
+		'flash_auto_expire'         => true,
+		'flash_expire_after_get'    => true,
+		'post_cookie_name'          => ''
+	);
+
+	/**
 	 * Service provider definitions
 	 */
 	public function provide()
 	{
 		// \Fuel\Session\Manager
-		$this->register('session', function ($dic, Array $config = array())
+		$this->register('session', function ($dic, $config = array())
 		{
 			// get the session config
 			$stack = $this->container->resolve('requeststack');
 			if ($request = $stack->top())
 			{
-				$instance = $request->getApplication()->getConfig();
+				$app = $request->getApplication();
 			}
 			else
 			{
-				$instance = $this->container->resolve('application.main')->getConfig();
+				$app = $this->container->resolve('application.main');
 			}
-			$config = \Arr::merge($instance->load('session', true), $config);
 
-			// check if we have a driver configured
-			if (empty($config['driver']))
+			// check if only a driver name or object is passed
+			if ( ! is_array($config))
 			{
-				throw new \RuntimeException('No session driver given or no default session driver set.');
+				$config = array('driver' => $config);
 			}
+
+			$config = \Arr::merge($this->defaults, $app->getConfig()->load('session', true), $config);
 
 			// determine the driver to load
 			if ($config['driver'] instanceOf Driver)
@@ -72,7 +93,13 @@ class FuelServiceProvider extends ServiceProvider
 				$driver = $dic->resolve('session.'.$config['driver'], array($config));
 			}
 
-			return $dic->resolve('Fuel\Session\Manager', array($driver, $config));
+			$manager = $dic->resolve('Fuel\Session\Manager', array($driver, $config));
+
+			// start the session
+			$manager->start();
+
+			// and use the applications' event instance make sure it ends too
+			$app->getEvent()->on('shutdown', function($event) { $this->stop(); }, $manager);
 		});
 
 		// \Fuel\Session\Driver\Native
