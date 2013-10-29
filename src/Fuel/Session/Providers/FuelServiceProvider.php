@@ -100,6 +100,9 @@ class FuelServiceProvider extends ServiceProvider
 
 			// and use the applications' event instance make sure it ends too
 			$app->getEvent()->on('shutdown', function($event) { $this->stop(); }, $manager);
+
+			// return the instance
+			return $manager;
 		});
 
 		// \Fuel\Session\Driver\Native

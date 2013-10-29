@@ -11,6 +11,17 @@
 namespace Fuel\Session;
 
 use Fuel\Common\DataContainer as Container;
+use Fuel\Common\Arr as Arr;
+
+/**
+ * @const  int  variable is in new state, expires on next load
+ */
+const EXPIRE_ON_REQUEST = 1;
+
+/**
+ * @const  int  variable is in new state, expires on first get
+ */
+const EXPIRE_ON_GET = 2;
 
 /**
  * Session Flash data container
@@ -22,231 +33,311 @@ use Fuel\Common\DataContainer as Container;
 class FlashContainer extends Container
 {
 	/**
-	 * @var  array  $expiration variable expiration tracker
+	 * @const  int  variable is stored in the current request
 	 */
-	protected $expiration = array();
+	const EXPIRE_STATE_NEW = 1;
 
 	/**
-	 * @var  string  $id   current flash id, used for variable namespacing
+	 * @const  int  variable is loaded from the session data store
 	 */
-	protected $id = 'flash';
+	const EXPIRE_STATE_LOADED = 2;
 
 	/**
-	 * @var  bool  $autoExpire   whether or not flash variables expire after the next load
+	 * @const  int  variable is expired, and will be removed on save
 	 */
-	protected $autoExpire = true;
+	const EXPIRE_STATE_EXPIRED = 3;
 
 	/**
-	 * @var  bool  $expireAfterGet   wether or not flash variables expire immediately after a get
+	 * @const  string  key value used to store expiration information
 	 */
-	protected $expireAfterGet = false;
+	const EXPIRE_DATA_KEY = '__expiry__data__';
 
 	/**
-	 * set session flash id name
+	 * @var  string  $namespace  current flash namespace
+	 */
+	protected $namespace = 'flash';
+
+	/**
+	 * @var  int  $defaultExpiryState  expiry state to assign to flash variables that don't have one
+	 */
+	protected $defaultExpiryState = 1;
+
+	/**
+	 * @var  array  $states  list of valid flash expiry states
+	 */
+	protected $expiryStates = array(
+		EXPIRE_ON_REQUEST,
+		EXPIRE_ON_GET,
+	);
+
+	/**
+	 * set session flash namespace
 	 *
-	 * @param	string	name of the flash id namespace
-	 * @return	void
-	 */
-	public function setId($name)
-	{
-		$this->id = $name;
-	}
-
-	/**
-	 * set session flash auto expiry
+	 * @param  string  flash namespace
 	 *
-	 * @param	bool	whether or not flash variables auto expire
-	 * @return	void
-	 */
-	public function setAutoExpire($expire = false)
-	{
-		$this->autoExpire = $expire;
-	}
-
-	/**
-	 * set session flash expiry after a get
+	 * @throws  \InvalidArgumentException
 	 *
-	 * @param	bool	whether or not flash variables expire after a get
-	 * @return	void
+	 * @return  void
 	 */
-	public function setExpireAfterGet($expire = false)
+	public function setNamespace($name)
 	{
-		$this->expireAfterGet = $expire;
-	}
-
-	/**
-	 * set session flash variables
-	 *
-	 * @param	string	name of the variable to set
-	 * @param	mixed	value
-	 * @access	public
-	 * @return	void
-	 */
-	public function setFlash($name, $value = null)
-	{
-		// prefix the name with the flash id
-		if ( ! empty($this->id))
+		$name = $name ?: '';
+		if ( ! is_string($name))
 		{
-			$name = $this->id.'.'.$name;
+			throw new \InvalidArgumentException('Argument passed to setNamespace() must be a string value');
 		}
 
-		$this->expiration[$name] = false;
-		$this->set($name, $value);
+		$this->namespace = $name;
 	}
 
 	/**
-	 * get session flash variables
+	 * set the default flash variable expiry to expire on next request
 	 *
-	 * @access	public
-	 * @param	string	name of the variable to get
-	 * @param	mixed	default value to return if the variable does not exist
-	 * @param	bool	true if the flash variable needs to expire immediately
-	 * @return	mixed
+	 * @return  void
 	 */
-	public function getFlash($name = null, $default = null, $expire = null)
+	public function setExpiryOnRequest()
 	{
-		if ( ! is_bool($expire))
-		{
-			$expire = $this->expireAfterGet;
-		}
-
-		// prefix the name with the flash id
-		if ( ! empty($this->id))
-		{
-			$name = $this->id.'.'.$name;
-		}
-
-		$value = $this->get($name, $default);
-
-		if ($expire)
-		{
-			$this->expiration[$name] = true;
-		}
-
-		return $value;
+		$this->defaultExpiryState = EXPIRE_ON_REQUEST;
 	}
 
 	/**
-	 * keep session flash variables
+	 * set the default flash variable expiry to expire on first get
 	 *
-	 * @access	public
-	 * @param	string	name of the variable to keep
-	 * @return	void
+	 * @return  void
 	 */
-	public function keepFlash($name = null)
+	public function setExpiryOnGet()
 	{
-		if ($name === null)
+		$this->defaultExpiryState = EXPIRE_ON_GET;
+	}
+
+	/**
+	 * Check if a key was set upon this bag's data
+	 *
+	 * @param   string  $key
+	 *
+	 * @return  bool
+	 *
+	 * @since   2.0.0
+	 */
+	public function has($key)
+	{
+		return parent::has($this->prefixKey($key));
+	}
+
+	/**
+	 * Reset the expiry state on the given key
+	 *
+	 * @param   string  $key
+	 *
+	 * @return  bool  true if reset, false if the given key doesn't exist
+	 *
+	 * @since   2.0.0
+	 */
+	public function keep($key)
+	{
+		if (isset($this->data[static::EXPIRE_DATA_KEY][$key]))
 		{
-			foreach (array_keys($this->expiration) as $name)
+			$this->data[static::EXPIRE_DATA_KEY][$key][1] = static::EXPIRE_STATE_NEW;
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Get the expiry state on the given key
+	 *
+	 * @param   string  $key
+	 *
+	 * @return  array  array with the key's expiration state flags, false if the given key doesn't exist
+	 *
+	 * @since   2.0.0
+	 */
+	public function expiration($key)
+	{
+		if (isset($this->data[static::EXPIRE_DATA_KEY][$key]))
+		{
+			$expiration = array(
+				$this->data[static::EXPIRE_DATA_KEY][$key][0] == EXPIRE_ON_REQUEST ? 'EXPIRE_ON_REQUEST' : 'EXPIRE_ON_GET',
+				$this->data[static::EXPIRE_DATA_KEY][$key][1] == static::EXPIRE_STATE_NEW ? 'STATE_NEW' : ($this->data[static::EXPIRE_DATA_KEY][$key][1] == static::EXPIRE_STATE_LOADED ? 'STATE_LOADED' : 'STATE_EXPIRED'),
+			);
+			return $expiration;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Get a key's value from this bag's data
+	 *
+	 * @param   string  $key
+	 * @param   mixed   $default
+	 *
+	 * @return  mixed
+	 *
+	 * @since   2.0.0
+	 */
+	public function get($key, $default = null)
+	{
+		// check if we have this key
+		if (parent::has($this->prefixKey($key)))
+		{
+			// do we have expiry information?
+			if ( ! isset($this->data[static::EXPIRE_DATA_KEY][$key]))
 			{
-				// if we have a flash id, only reset those that match
-				if (empty($this->id) or strpos($name, $this->id.'.') === 0)
+				// nope, simply return the data
+				return parent::get($this->prefixKey($key), $default);
+			}
+
+			// return the data if we don't have expiry information or if the data is valid
+			if ($this->data[static::EXPIRE_DATA_KEY][$key][1] !== static::EXPIRE_STATE_EXPIRED)
+			{
+				// check the expiry strategy
+				if ($this->data[static::EXPIRE_DATA_KEY][$key][0] === EXPIRE_ON_GET)
 				{
-					$this->expiration[$name] = false;
+					// expire on get, so expire it
+					$this->data[static::EXPIRE_DATA_KEY][$key][1] = static::EXPIRE_STATE_EXPIRED;
 				}
-			}
-		}
-		else
-		{
-			// prefix the name with the flash id
-			if ( ! empty($this->id))
-			{
-				$name = $this->id.'.'.$name;
-			}
 
-			// reset the expiration if the key exists
-			if (isset($this->expiration[$name]))
-			{
-				$this->expiration[$name] = false;
+				// return the data
+				return parent::get($this->prefixKey($key), $default);
 			}
 		}
+
+		// no dice, return the default
+		return $default;
 	}
 
 	/**
-	 * delete session flash variables
+	 * Set a config value
 	 *
-	 * @param	string	name of the variable to delete
-	 * @param	mixed	value
-	 * @access	public
-	 * @return	void
+	 * @param   string  $key
+	 * @param   mixed   $value
+	 * @param   int     $expiry  optional variable expiry override
+	 *
+	 * @throws  \RuntimeException
+	 *
+	 * @since   2.0.0
 	 */
-	public function deleteFlash($name = null)
+	public function set($key, $value, $expiry = null)
 	{
-		if ($name === null)
+		// make sure we have a valid key
+		if ($key === null)
 		{
-			foreach (array_keys($this->expiration) as $name)
-			{
-				// if we have a flash id, only reset those that match
-				if (empty($this->id) or strpos($name, $this->id.'.') === 0)
-				{
-					unset($this->expiration[$name]);
-					$this->delete($name);
-				}
-			}
+			throw new \RuntimeException('No valid key passed to setFlash()');
 		}
-		else
-		{
-			// prefix the name with the flash id
-			if ( ! empty($this->id))
-			{
-				$name = $this->id.'.'.$name;
-			}
 
-			// reset the expiration if the key exists
-			if (isset($this->expiration[$name]))
-			{
-				unset($this->expiration[$name]);
-				$this->delete($name);
-			}
+		// get the default expiry if none is given
+		$expiry === null and $expiry = $this->defaultExpiryState;
+
+		// validate the expiry
+		if ( ! in_array($expiry, $this->expiryStates))
+		{
+			throw new \RuntimeException('"'.$expiry.'" is not a valid session flash variable expiration state.');
 		}
+
+		// store the expiry information for this key
+		$this->data[static::EXPIRE_DATA_KEY][$key] = array($expiry, static::EXPIRE_STATE_NEW);
+
+		// and store the value passed
+		parent::set($this->prefixKey($key), $value);
+	}
+
+	/**
+	 * Delete data from the container
+	 *
+	 * @param   string   $key  key to delete
+	 *
+	 * @return  boolean  delete success or failure
+	 *
+	 * @since   2.0.0
+	 */
+	public function delete($key)
+	{
+		// remove the expiration tracking for this key
+		unset($this->data[static::EXPIRE_DATA_KEY][$key]);
+
+		// and delete the key itself
+		return parent::delete($this->prefixKey($key));
 	}
 
 	/**
 	 * Replace the container's data.
 	 *
 	 * @param   array  $data  new data
-	 * @return  $this
+	 *
 	 * @throws  RuntimeException
+	 *
 	 * @since   2.0.0
 	 */
 	public function setContents(array $data)
 	{
-		if ( ! isset($data['data']) or  ! isset($data['expiration']))
+		// make sure we have our expire data key
+		if (isset($data[static::EXPIRE_DATA_KEY]))
 		{
-			throw new \InvalidArgumentException('The Flash data container requires that you set both data and expiration information!');
+			// process the expiration settings
+			foreach($data[static::EXPIRE_DATA_KEY] as $key => $expiration)
+			{
+				// if it was set on the last request, make it as loaded
+				if ($expiration[1] === static::EXPIRE_STATE_NEW)
+				{
+					$data[static::EXPIRE_DATA_KEY][$key][1] = static::EXPIRE_STATE_LOADED;
+				}
+
+				// if it was already loaded on the last request, and we expire on request, delete it
+				elseif ($expiration[0] === EXPIRE_ON_REQUEST and $expiration[1] === static::EXPIRE_STATE_LOADED)
+				{
+					unset($data[static::EXPIRE_DATA_KEY][$key]);
+					\Arr::delete($data, $this->prefixKey($key));
+				}
+			}
+		}
+		else
+		{
+			// not set, create an empty one to start with
+			$data[static::EXPIRE_DATA_KEY] = array();
 		}
 
-		parent::setContents($data['data']);
-
-		$this->expiration = $data['expiration'];
-
-		// existing data, expire it if needed
-		foreach (array_keys($this->expiration) as $index)
-		{
-			$this->expiration[$index] = $this->autoExpire;
-		}
+		// store the data
+		parent::setContents($data);
 	}
 
 	/**
 	 * Get the container's data
 	 *
 	 * @return  array  container's data
+	 *
 	 * @since   2.0.0
 	 */
 	public function getContents()
 	{
+		// make a copy to leave the original container untouched
 		$data = $this->data;
-		$expiration = $this->expiration;
 
-		foreach($expiration as $name => $expired)
+		// delete all expired variables
+		foreach($data[static::EXPIRE_DATA_KEY] as $key => $expiration)
 		{
-			if ($expired)
+			if ($expiration[1] === static::EXPIRE_STATE_EXPIRED)
 			{
-				unset($expiration[$name]);
-				\Arr::delete($data, $name);
+				unset($data[static::EXPIRE_DATA_KEY][$key]);
+				\Arr::delete($data, $this->prefixKey($key));
 			}
 		}
 
-		return array('data' => $data, 'expiration' => $expiration);
+		// and return what's left over
+		return $data;
+	}
+
+	/**
+	 * Prefix the container key with the flash namespace currently set
+	 *
+	 * @param   string  $key
+	 *
+	 * @return   string  key
+	 */
+	protected function prefixKey($key)
+	{
+		// prefix the key with the flash namespace
+		return empty($this->namespace) ? $key : $this->namespace.'.'.$key;
 	}
 }

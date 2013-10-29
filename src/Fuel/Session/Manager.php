@@ -85,25 +85,25 @@ class Manager
 		else
 		{
 			$this->rotationInterval = (int) $config['rotation_time'];
+			$this->rotationTime = time() + $this->rotationInterval;
 		}
-		$this->rotationTime = time();
 
-		// any flash id defined?
-		if (isset($config['flash_id']))
+		// any flash namespace defined?
+		if (isset($config['flash_namespace']))
 		{
-			$this->setFlashId($config['flash_id']);
+			$this->setFlashNamespace($config['flash_namespace']);
 		}
 
 		// flash auto expiration defined?
-		if (isset($config['flash_auto_expire']))
+		if (isset($config['flash_auto_expire']) and $config['flash_auto_expire'])
 		{
-			$this->flash->setAutoExpire((bool) $config['flash_auto_expire']);
+			$this->flash->setExpiryOnRequest();
 		}
 
 		// flash expire after get defined?
-		if (isset($config['flash_expire_after_get']))
+		if (isset($config['flash_expire_after_get']) and $config['flash_expire_after_get'])
 		{
-			$this->flash->setExpireAfterGet((bool) $config['flash_expire_after_get']);
+			$this->flash->setExpiryOnGet();
 		}
 	}
 
@@ -112,20 +112,9 @@ class Manager
 	 */
 	public function __call($method , Array $arguments)
 	{
-		// do we need to rotate?
-		if ($this->rotationInterval and $this->rotationTime < time())
-		{
-			$this->rotate();
-		}
-
 		// is this a flash method?
 		if (substr($method, -5) == 'Flash')
 		{
-			if (is_callable(array($this->flash, $method)))
-			{
-				return call_user_func_array(array($this->flash, $method), $arguments);
-			}
-
 			$flashmethod = substr($method, 0, strlen($method)-5);
 
 			if (is_callable(array($this->flash, $flashmethod)))
@@ -150,6 +139,7 @@ class Manager
 	 */
 	public function create()
 	{
+		// reset the data containers
 		$this->reset();
 
 		// and create a new session
@@ -189,6 +179,12 @@ class Manager
 	 */
 	public function write()
 	{
+		// do we need to rotate?
+		if ($this->rotationInterval and $this->rotationTime < time())
+		{
+			$this->rotate();
+		}
+
 		return $this->driver->write($this, $this->data, $this->flash);
 	}
 
@@ -203,12 +199,17 @@ class Manager
 	}
 
 	/**
-	 * rotate the session id
+	 * rotate the session id, and reset the rotation time if needed
 	 *
 	 * @return	bool
 	 */
 	public function rotate()
 	{
+		if ($this->rotationInterval)
+		{
+			$this->rotationTime = time() + $this->rotationInterval;
+		}
+
 		return $this->driver->regenerate($this);
 	}
 
@@ -239,30 +240,30 @@ class Manager
 	// --------------------------------------------------------------------
 
 	/**
-	 * set the session flash id
+	 * set the session flash namespace
 	 *
-	 * @param	string	name of the id to set
+	 * @param	string	name of the namespace to set
 	 * @access	public
 	 * @return	Fuel\Core\Session_Driver
 	 */
-	public function setFlashId($name)
+	public function setFlashNamespace($name)
 	{
-		$this->config['flash_id'] = (string) $name;
+		$this->config['flash_namespace'] = (string) $name;
 
-		$this->flash->setId($this->config['flash_id']);
+		$this->flash->setNamespace($this->config['flash_namespace']);
 
 		return $this;
 	}
 
 	/**
-	 * get the current session flash id
+	 * get the current session flash namespace
 	 *
 	 * @access	public
-	 * @return	string	name of the flash id
+	 * @return	string	name of the flash namespace
 	 */
-	public function getFlashId()
+	public function getFlashNamespace()
 	{
-		return $this->config['flash_id'];
+		return $this->config['flash_namespace'];
 	}
 
 	/**
@@ -276,5 +277,7 @@ class Manager
 		// create the flash container
 		$this->flash = new FlashContainer();
 
+		// initialise the flash expiry store
+		$this->flash->set(FlashContainer::EXPIRE_DATA_KEY, array());
 	}
 }
