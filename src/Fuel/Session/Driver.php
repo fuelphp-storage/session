@@ -21,6 +21,32 @@ namespace Fuel\Session;
 abstract class Driver
 {
 	/**
+	 * @var  array  $condig  Passed configuration array
+	 */
+	protected $config = array();
+
+	/**
+	 * @var  array  global session config defaults
+	 */
+	protected $globalDefaults = array(
+		'match_ip'                  => false,
+		'match_ua'                  => true,
+		'cookie_domain'             => '',
+		'cookie_path'               => '/',
+		'cookie_secure'             => false,
+		'cookie_http_only'          => null,
+		'expire_on_close'           => false,
+		'expiration_time'           => 7200,
+		'rotation_time'             => 300,
+		'flash_namespace'           => 'flash',
+		'flash_auto_expire'         => true,
+		'flash_expire_after_get'    => true,
+		'post_cookie_name'          => '',
+		'http_header_name'          => 'Session-Id',
+		'enable_cookie'             => true,
+	);
+
+	/**
 	 * @var  integer  $expiration Global session expiration
 	 */
 	protected $expiration = null;
@@ -33,7 +59,7 @@ abstract class Driver
 	/**
 	 * @var  string  $name  Name used to identify this session
 	 */
-	protected $name = null;
+	protected $name = 'fuelsession';
 
 	/**
 	 * Constructor
@@ -43,15 +69,14 @@ abstract class Driver
 	 */
 	public function __construct(array $config = array())
 	{
-		if (isset($config['native']['cookie_name']))
-		{
-			$this->setName($config['native']['cookie_name']);
-		}
+		$config = array_merge($this->globalDefaults, $config);
 
 		if (isset($config['expiration_time']) and is_numeric($config['expiration_time']) and $config['expiration_time'] > 0)
 		{
 			$this->setExpire($config['expiration_time']);
 		}
+
+		$this->config = $config;
 	}
 
     /**
@@ -85,7 +110,7 @@ abstract class Driver
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
-     * @return bool  result of the write operation
+     * @return bool  result of the read operation
 	 * @since  2.0.0
      */
     abstract public function read(Manager $manager, DataContainer $data, FlashContainer $flash);
@@ -129,10 +154,13 @@ abstract class Driver
      *
      * @param  Manager $manager
      *
-     * @return bool  result of the regenerare operation
 	 * @since  2.0.0
      */
-    abstract public function regenerate(Manager $manager);
+    public function regenerate(Manager $manager)
+    {
+		// store a fake session id
+		$this->setSessionId(uniqid());
+	}
 
 	/**
 	 * Set the global expiration of the entire session
@@ -203,4 +231,35 @@ abstract class Driver
 		return null;
 	}
 
+	/**
+	 * Sets a cookie. Note that all cookie values must be strings and no
+	 * automatic serialization will be performed!
+	 *
+	 * @param   string    name of cookie
+	 * @param   string    value of cookie
+	 * @return  boolean
+	 */
+	protected function setCookie($name, $value)
+	{
+		// add the current time so we have an offset
+		$expiration = $this->config['expiration_time'] > 0 ? $this->config['expiration_time'] + time() : 0;
+
+		return setcookie($name, $value, $expiration, $this->config['cookie_path'], $this->config['cookie_domain'], $this->config['cookie_secure'], $this->config['cookie_http_only']);
+	}
+
+	/**
+	 * Deletes a cookie by making the value null and expiring it.
+	 *
+	 * @param   string   cookie name
+	 *
+	 * @return  boolean
+	 */
+	protected function deleteCookie($name)
+	{
+		// Remove the cookie
+		unset($_COOKIE[$name]);
+
+		// Nullify the cookie and make it expire
+		return setcookie($name, null, -86400, $this->config['cookie_path'], $this->config['cookie_domain'], $this->config['cookie_secure'], $this->config['cookie_http_only']);
+	}
 }
