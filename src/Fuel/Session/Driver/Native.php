@@ -25,6 +25,13 @@ use Fuel\Session\FlashContainer;
 class Native extends Driver
 {
 	/**
+	 * @var  array  session driver config defaults
+	 */
+	protected $defaults = array(
+		'cookie_name'           => 'fuelnid',
+	);
+
+	/**
 	 * Constructor
 	 *
 	 * @param  array    $config  driver configuration
@@ -32,6 +39,12 @@ class Native extends Driver
 	 */
 	public function __construct(array $config = array())
 	{
+		// make sure we've got all config elements for this driver
+		$config['native'] = array_merge($this->defaults, isset($config['native']) ? $config['native'] : array());
+
+		// call the parent to process the global config
+		parent::__construct($config);
+
 		// get default the cookie params
 		$params = session_get_cookie_params();
 
@@ -45,14 +58,17 @@ class Native extends Driver
 		{
 			$params['path'] = $config['cookie_path'];
 		}
+
 		if (isset($config['cookie_secure']) and $config['cookie_secure'])
 		{
 			$params['secure'] = true;
 		}
+
 		if (isset($config['cookie_http_only']) and $config['cookie_http_only'])
 		{
 			$params['httponly'] = true;
 		}
+
 		if (isset($config['expire_on_close']) and $config['expire_on_close'])
 		{
 			$params['lifetime'] = 0;
@@ -65,9 +81,14 @@ class Native extends Driver
 		{
 			$params['lifetime'] = 7200;
 		}
+
 		session_set_cookie_params($params['lifetime'], $params['path'], $params['domain'], $params['secure'], $params['httponly']);
 
-		parent::__construct($config);
+		// store the defined name
+		if (isset($config['native']['cookie_name']))
+		{
+			$this->setName($config['native']['cookie_name']);
+		}
 	}
 
     /**
@@ -130,7 +151,7 @@ class Native extends Driver
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
-     * @return bool  result of the write operation
+     * @return bool  result of the read operation
 	 * @since  2.0.0
      */
     public function read(Manager $manager, DataContainer $data, FlashContainer $flash)
@@ -240,7 +261,6 @@ class Native extends Driver
      *
      * @param  Manager $manager
      *
-     * @return bool  result of the regenerare operation
 	 * @since  2.0.0
      */
     public function regenerate(Manager $manager)
