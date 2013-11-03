@@ -14,12 +14,12 @@ use Fuel\Common\DataContainer as Container;
 use Fuel\Common\Arr as Arr;
 
 /**
- * @const  int  variable is in new state, expires on next load
+ * @const  int  expire variable on next session load
  */
 const EXPIRE_ON_REQUEST = 1;
 
 /**
- * @const  int  variable is in new state, expires on first get
+ * @const  int  expire variable on first get
  */
 const EXPIRE_ON_GET = 2;
 
