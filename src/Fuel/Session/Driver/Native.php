@@ -11,7 +11,6 @@
 namespace Fuel\Session\Driver;
 
 use Fuel\Session\Driver;
-use Fuel\Session\Manager;
 use Fuel\Session\DataContainer;
 use Fuel\Session\FlashContainer;
 
@@ -94,19 +93,18 @@ class Native extends Driver
     /**
      * Create a new session
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the start operation
 	 * @since  2.0.0
      */
-    public function create(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function create(DataContainer $data, FlashContainer $flash)
     {
 		// start the native session if we don't have one active yet
 		if (session_status() !== PHP_SESSION_ACTIVE)
 		{
-			$this->start($manager, $data, $flash);
+			$this->start($data, $flash);
 		}
 
 		// regenerate the session id and flush any existing sessions
@@ -122,14 +120,13 @@ class Native extends Driver
     /**
      * Start the session, and read existing session data back
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the start operation
 	 * @since  2.0.0
      */
-    public function start(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function start(DataContainer $data, FlashContainer $flash)
     {
 		// start the native session
 		if (session_status() !== 2)
@@ -141,20 +138,19 @@ class Native extends Driver
 		$this->setSessionId(session_id());
 
 		// and read any existing session data
-		return $this->read($manager, $data, $flash);
+		return $this->read($data, $flash);
 	}
 
     /**
      * Read session data
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the read operation
 	 * @since  2.0.0
      */
-    public function read(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function read(DataContainer $data, FlashContainer $flash)
     {
 		// bail out if we don't have an active session
 		if (session_status() !== PHP_SESSION_ACTIVE)
@@ -163,43 +159,40 @@ class Native extends Driver
 		}
 
 		// else fetch the data from the native session global
-		elseif (isset($_SESSION['data']) and isset($_SESSION['flash']))
+		elseif (isset($_SESSION[$this->name]))
 		{
-			$data->setContents($_SESSION['data']);
-			$flash->setContents($_SESSION['flash']);
+			return $this->processPayload($_SESSION[$this->name], $data, $flash);
 		}
 
-		return true;
+		return false;
 	}
 
     /**
      * Write session data
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the write operation
 	 * @since  2.0.0
      */
-    public function write(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function write(DataContainer $data, FlashContainer $flash)
     {
 		// not implemented in the native driver, flush the data through a stop/start
-		$this->stop($manager, $data, $flash);
-		$this->start($manager, $data, $flash);
+		$this->stop($data, $flash);
+		$this->start($data, $flash);
 	}
 
     /**
      * Stop the session
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the write operation
 	 * @since  2.0.0
      */
-    public function stop(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function stop(DataContainer $data, FlashContainer $flash)
     {
 		// bail out if we don't have an active session
 		if (session_status() !== PHP_SESSION_ACTIVE)
@@ -207,16 +200,9 @@ class Native extends Driver
 			return false;
 		}
 
-		// write and close the session
-		else
-		{
-			$_SESSION = array(
-				'data' => $data->getContents(),
-				'flash' => $flash->getContents(),
-			);
+		$_SESSION[$this->name] = $this->assemblePayload();
 
-			session_write_close();
-		}
+		session_write_close();
 
 		return true;
 	}
@@ -224,12 +210,10 @@ class Native extends Driver
     /**
      * Destroy the session
      *
-     * @param  Manager $manager
-     *
      * @return bool  result of the write operation
 	 * @since  2.0.0
      */
-    public function destroy(Manager $manager)
+    public function destroy()
     {
 		// bail out if we don't have an active session
 		if (session_status() !== PHP_SESSION_ACTIVE)
@@ -259,11 +243,9 @@ class Native extends Driver
     /**
      * Regerate the session, rotate the session id
      *
-     * @param  Manager $manager
-     *
 	 * @since  2.0.0
      */
-    public function regenerate(Manager $manager)
+    public function regenerate()
     {
 		// regenerate the session id
 		session_regenerate_id();

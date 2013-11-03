@@ -11,7 +11,6 @@
 namespace Fuel\Session\Driver;
 
 use Fuel\Session\Driver;
-use Fuel\Session\Manager;
 use Fuel\Session\DataContainer;
 use Fuel\Session\FlashContainer;
 
@@ -62,80 +61,70 @@ class Cookie extends Driver
     /**
      * Create a new session
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the start operation
 	 * @since  2.0.0
      */
-    public function create(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function create(DataContainer $data, FlashContainer $flash)
     {
 		// start the session
 		if ( ! $this->started)
 		{
-			$this->start($manager, $data, $flash);
+			$this->start($data, $flash);
 		}
 	}
 
     /**
      * Start the session, and read existing session data back
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the start operation
 	 * @since  2.0.0
      */
-    public function start(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function start(DataContainer $data, FlashContainer $flash)
     {
 		// generate a new session id
-		$this->regenerate($manager);
+		$this->regenerate();
 
 		// mark the session as started
 		$this->started = true;
 
 		// and read any existing session data
-		return $this->read($manager, $data, $flash);
+		return $this->read($data, $flash);
 	}
 
     /**
      * Read session data
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the read operation
 	 * @since  2.0.0
      */
-    public function read(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function read(DataContainer $data, FlashContainer $flash)
     {
-		// we need to have a session started
+		// bail out if we don't have an active session
 		if ($this->started)
 		{
-			// fetch the data from the cookie
-			if (isset($_COOKIE[$this->getName()]))
+			// fetch the session data (is in the session cookie too)
+			if ($session = $this->findSessionId())
 			{
-				$payload = unserialize($this->decrypt($_COOKIE[$this->getName()]));
+				// and fetch the payload
+				$payload = $this->decrypt($session);
 
-				// verify the payload
-				if (isset($payload['security']))
+				// make sure we got something meaningful
+				if (is_string($payload) and substr($payload,0,2) == 'a:')
 				{
-					if (( ! $this->config['match_ip'] or $payload['security']['ip'] === $_SERVER['REMOTE_ADDR']) and
-						( ! $this->config['match_ua'] or $payload['security']['ua'] === $_SERVER['HTTP_USER_AGENT']) and
-						($payload['security']['ts'] == 0 or $payload['security']['ts'] >= time()))
-					{
-						// set the session id
-						$this->setSessionId($payload['security']['id']);
+					// unserialize it
+					$payload = unserialize($payload);
 
-						// and store the data
-						$data->setContents($payload['data']);
-						$flash->setContents($payload['flash']);
-
-						return true;
-					}
+					// verify and process the payload
+					return $this->processPayload($payload, $data, $flash);
 				}
 			}
 		}
@@ -147,52 +136,36 @@ class Cookie extends Driver
     /**
      * Write session data
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the write operation
 	 * @since  2.0.0
      */
-    public function write(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function write(DataContainer $data, FlashContainer $flash)
     {
 		// not implemented in the cookie driver, flush the data through a stop/start
-		$this->stop($manager, $data, $flash);
-		$this->start($manager, $data, $flash);
+		$this->stop($data, $flash);
+		$this->start($data, $flash);
 	}
 
     /**
      * Stop the session
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the write operation
 	 * @since  2.0.0
      */
-    public function stop(Manager $manager, DataContainer $data, FlashContainer $flash)
+    public function stop(DataContainer $data, FlashContainer $flash)
     {
 		// bail out if we don't have an active session
 		if ( ! $this->started)
 		{
 			return false;
 		}
-
-		$expiration = $this->config['expiration_time'] > 0 ? $this->config['expiration_time'] + time() : 0;
-
-		$payload = array(
-			'data' => $data->getContents(),
-			'flash' => $flash->getContents(),
-			'security' => array(
-				'ip' => $_SERVER['REMOTE_ADDR'],
-				'ua' => $_SERVER['HTTP_USER_AGENT'],
-				'ts' => $expiration,
-				'id' => $this->getSessionId(),
-			),
-		);
-
-		$payload = $this->encrypt(serialize($payload));
+		$payload = $this->encrypt(serialize($this->assemblePayload($data, $flash)));
 
 		if (strlen($payload) > 4096)
 		{
@@ -208,12 +181,10 @@ class Cookie extends Driver
     /**
      * Destroy the session
      *
-     * @param  Manager $manager
-     *
      * @return bool  result of the write operation
 	 * @since  2.0.0
      */
-    public function destroy(Manager $manager)
+    public function destroy()
     {
 		// we need to have a session started
 		if ($this->started)

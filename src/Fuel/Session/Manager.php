@@ -48,18 +48,18 @@ class Manager
 	protected $flash;
 
 	/**
-	 * @var  mixed  $rotationTime  Session id rotation interval, or false if rotation is disabled
+	 * @var  mixed  $rotationInterval  Session id rotation interval, or false if rotation is disabled
 	 *
 	 * @since 2.0.0
 	 */
 	protected $rotationInterval;
 
 	/**
-	 * @var  integer  $rotationTime  Unix timestamp of the last session Id rotation
+	 * @var  integer  $rotationTimer  Unix timestamp of the last session Id rotation
 	 *
 	 * @since 2.0.0
 	 */
-	protected $rotationTime;
+	protected $rotationTimer;
 
 	/**
 	 * Setup a session instance
@@ -70,10 +70,13 @@ class Manager
 		$this->driver = $driver;
 		$this->config = $config;
 
+		// tell the driver who manages the session
+		$this->driver->setManager($this);
+
 		// create the containers
 		$this->reset();
 
-		// define the session rotation time
+		// set the session rotation interval and the default rotation timer
 		if ( ! isset($config['rotation_time']))
 		{
 			$this->rotationInterval = 300;
@@ -85,7 +88,7 @@ class Manager
 		else
 		{
 			$this->rotationInterval = (int) $config['rotation_time'];
-			$this->rotationTime = time() + $this->rotationInterval;
+			$this->rotationTimer = time() + $this->rotationInterval;
 		}
 
 		// any flash namespace defined?
@@ -95,15 +98,13 @@ class Manager
 		}
 
 		// flash auto expiration defined?
-		if (isset($config['flash_auto_expire']) and $config['flash_auto_expire'])
-		{
-			$this->flash->setExpiryOnRequest();
-		}
-
-		// flash expire after get defined?
-		if (isset($config['flash_expire_after_get']) and $config['flash_expire_after_get'])
+		if (isset($config['flash_auto_expire']) and $config['flash_auto_expire'] == false)
 		{
 			$this->flash->setExpiryOnGet();
+		}
+		else
+		{
+			$this->flash->setExpiryOnRequest();
 		}
 	}
 
@@ -143,7 +144,7 @@ class Manager
 		$this->reset();
 
 		// and create a new session
-		return $this->driver->create($this, $this->data, $this->flash);
+		return $this->driver->create($this->data, $this->flash);
 	}
 
 	/**
@@ -153,13 +154,7 @@ class Manager
 	 */
 	public function start()
 	{
-		if ($result = $this->driver->start($this, $this->data, $this->flash))
-		{
-			// always rotate when starting the session
-			$this->rotate();
-		}
-
-		return $result;
+		return $this->driver->start($this->data, $this->flash);
 	}
 
 	/**
@@ -169,7 +164,7 @@ class Manager
 	 */
 	public function read()
 	{
-		return $this->driver->read($this, $this->data, $this->flash);
+		return $this->driver->read($this->data, $this->flash);
 	}
 
 	/**
@@ -180,12 +175,12 @@ class Manager
 	public function write()
 	{
 		// do we need to rotate?
-		if ($this->rotationInterval and $this->rotationTime < time())
+		if ($this->rotationInterval and $this->rotationTimer < time())
 		{
 			$this->rotate();
 		}
 
-		return $this->driver->write($this, $this->data, $this->flash);
+		return $this->driver->write($this->data, $this->flash);
 	}
 
 	/**
@@ -195,22 +190,29 @@ class Manager
 	 */
 	public function stop()
 	{
-		return $this->driver->stop($this, $this->data, $this->flash);
+		// do we need to rotate?
+		if ($this->rotationInterval and $this->rotationTimer < time())
+		{
+			$this->rotate();
+		}
+
+		// stop the current session
+		return $this->driver->stop($this->data, $this->flash);
 	}
 
 	/**
 	 * rotate the session id, and reset the rotation time if needed
-	 *
-	 * @return	bool
 	 */
 	public function rotate()
 	{
+		// update the session id rotation timer
 		if ($this->rotationInterval)
 		{
-			$this->rotationTime = time() + $this->rotationInterval;
+			$this->rotationTimer = time() + $this->rotationInterval;
 		}
 
-		return $this->driver->regenerate($this);
+		// regenerate the session id
+		$this->driver->regenerate($this);
 	}
 
 	/**
@@ -235,6 +237,28 @@ class Manager
 	public function getKey($name = 'SessionId')
 	{
 		return $this->driver->getKey($name);
+	}
+
+	/**
+	 * get the current rotation time
+	 *
+	 * @access	public
+	 * @return	int
+	 */
+	public function getRotationTimer()
+	{
+		return $this->rotationTimer;
+	}
+
+	/**
+	 * get the defined rotation interval
+	 *
+	 * @access	public
+	 * @param	int	 unix timestamp the last time the id was rotated
+	 */
+	public function setRotationTimer($time)
+	{
+		$this->rotationTimer = $time;
 	}
 
 	// --------------------------------------------------------------------
@@ -279,5 +303,6 @@ class Manager
 
 		// initialise the flash expiry store
 		$this->flash->set(FlashContainer::EXPIRE_DATA_KEY, array());
+
 	}
 }

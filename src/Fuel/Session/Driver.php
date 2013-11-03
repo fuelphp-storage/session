@@ -40,11 +40,15 @@ abstract class Driver
 		'rotation_time'             => 300,
 		'flash_namespace'           => 'flash',
 		'flash_auto_expire'         => true,
-		'flash_expire_after_get'    => true,
 		'post_cookie_name'          => '',
 		'http_header_name'          => 'Session-Id',
 		'enable_cookie'             => true,
 	);
+
+	/**
+	 * @var  Manager  Session manager instance that manages this driver
+	 */
+	protected $manager = null;
 
 	/**
 	 * @var  integer  $expiration Global session expiration
@@ -65,105 +69,134 @@ abstract class Driver
 	 * Constructor
 	 *
 	 * @param  array    $config  driver configuration
+	 *
 	 * @since  2.0.0
 	 */
 	public function __construct(array $config = array())
 	{
+		// make sure we've got all the config values
 		$config = array_merge($this->globalDefaults, $config);
 
+		// set the expiration inactivity timer. if invalid, default to 7200 seconds (2 hours)
 		if (isset($config['expiration_time']) and is_numeric($config['expiration_time']) and $config['expiration_time'] > 0)
 		{
 			$this->setExpire($config['expiration_time']);
 		}
+		else
+		{
+			$this->setExpire(7200);
+		}
 
+		// store the config passed
 		$this->config = $config;
 	}
 
     /**
      * Create a new session
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the create operation
+     *
 	 * @since  2.0.0
      */
-    abstract public function create(Manager $manager, DataContainer $data, FlashContainer $flash);
+    abstract public function create(DataContainer $data, FlashContainer $flash);
 
     /**
      * Start the session
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the start operation
+	 *
 	 * @since  2.0.0
      */
-    abstract public function start(Manager $manager, DataContainer $data, FlashContainer $flash);
+    abstract public function start(DataContainer $data, FlashContainer $flash);
 
     /**
      * Read session data
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the read operation
+	 *
 	 * @since  2.0.0
      */
-    abstract public function read(Manager $manager, DataContainer $data, FlashContainer $flash);
+    abstract public function read(DataContainer $data, FlashContainer $flash);
 
     /**
      * Write session data
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the write operation
+	 *
 	 * @since  2.0.0
      */
-    abstract public function write(Manager $manager, DataContainer $data, FlashContainer $flash);
+    abstract public function write(DataContainer $data, FlashContainer $flash);
 
     /**
      * Stop the session
      *
-     * @param  Manager $manager
      * @param  DataContainer $data
      * @param  FlashContainer $flash
      *
      * @return bool  result of the stop operation
+	 *
 	 * @since  2.0.0
      */
-    abstract public function stop(Manager $manager, DataContainer $data, FlashContainer $flash);
+    abstract public function stop(DataContainer $data, FlashContainer $flash);
 
     /**
      * Destroy the session
      *
-     * @param  Manager $manager
-     *
      * @return bool  result of the destroy operation
+	 *
 	 * @since  2.0.0
      */
-    abstract public function destroy(Manager $manager);
+    abstract public function destroy();
 
     /**
-     * Regerate the session, rotate the session id
-     *
-     * @param  Manager $manager
+     * Regenerate the session id
      *
 	 * @since  2.0.0
      */
-    public function regenerate(Manager $manager)
+    public function regenerate()
     {
-		// store a fake session id
-		$this->setSessionId(uniqid());
+		// generate a new random session id
+		$pool = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+		$sessionId = '';
+		for ($i=0; $i < 32; $i++)
+		{
+			$sessionId .= substr($pool, mt_rand(0, strlen($pool) -1), 1);
+		}
+
+		// store the new session id
+		$this->setSessionId($sessionId);
+	}
+
+	/**
+	 * Set the manager instance that manages this driver
+	 *
+     * @param  Manager  instance
+     *
+	 * @since  2.0.0
+	 */
+	public function setManager(Manager $manager)
+	{
+		$this->manager = $manager;
 	}
 
 	/**
 	 * Set the global expiration of the entire session
+	 *
+     * @param  int  session expiration time in seconds of inactivity
+     *
+	 * @since  2.0.0
 	 */
 	public function setExpire($expiry)
 	{
@@ -230,6 +263,87 @@ abstract class Driver
 
 		return null;
 	}
+
+	/**
+	 * Find the current session id
+	 */
+	protected function findSessionId()
+	{
+		// check for a posted session id
+		if ( ! empty($this->config['post_cookie_name']) and isset($_POST[$this->config['post_cookie_name']]))
+		{
+			$this->sessionId = $_POST[$this->config['post_cookie_name']];
+		}
+
+		// else check for a regular cookie
+		elseif ( ! empty($this->config['enable_cookie']) and isset($_COOKIE[$this->name]))
+		{
+			$this->sessionId = $_COOKIE[$this->name];
+		}
+
+		// else check for a session id in the URL
+		elseif (isset($_GET[$this->name]))
+		{
+			$this->sessionId = $_GET[$this->name];
+		}
+
+		// TODO: else check the HTTP headers for the session id
+
+		return $this->sessionId ?: null;
+	}
+
+	/**
+	 * Process the session payload
+	 */
+	protected function processPayload(Array $payload, DataContainer $data, FlashContainer $flash)
+	{
+		// verify the payload
+		if (isset($payload['security']) and isset($payload['data']) and isset($payload['flash']))
+		{
+			if (( ! $this->config['match_ip'] or $payload['security']['ip'] === $_SERVER['REMOTE_ADDR']) and
+				( ! $this->config['match_ua'] or $payload['security']['ua'] === $_SERVER['HTTP_USER_AGENT']) and
+				($payload['security']['ex'] == 0 or $payload['security']['ex'] >= time()) and
+				$payload['security']['id'] == $this->sessionId)
+			{
+				// restore the session id
+				$this->setSessionId($payload['security']['id']);
+
+				// restore the last session id rotation timer
+				$this->manager->setRotationTimer($payload['security']['rt']);
+
+				// and store the data
+				$data->setContents($payload['data']);
+				$flash->setContents($payload['flash']);
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Process the session payload
+	 *
+	 * @return  array  the assembled session payload
+	 */
+	protected function assemblePayload(DataContainer $data, FlashContainer $flash)
+	{
+		$expiration = $this->config['expiration_time'] > 0 ? $this->config['expiration_time'] + time() : 0;
+
+		return array(
+			'data' => $data->getContents(),
+			'flash' => $flash->getContents(),
+			'security' => array(
+				'ip' => $_SERVER['REMOTE_ADDR'],
+				'ua' => $_SERVER['HTTP_USER_AGENT'],
+				'ex' => $expiration,
+				'rt' => $this->manager->getRotationTimer(),
+				'id' => $this->sessionId,
+			),
+		);
+	}
+
 
 	/**
 	 * Sets a cookie. Note that all cookie values must be strings and no
