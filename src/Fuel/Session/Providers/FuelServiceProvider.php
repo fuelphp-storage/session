@@ -27,28 +27,10 @@ class FuelServiceProvider extends ServiceProvider
 	/**
 	 * @var  array  list of service names provided by this provider
 	 */
-	public $provides = array('session',
+	public $provides = array(
+		'session',
 		'session.native',
-	);
-
-	/**
-	 * array of global session defaults
-	 */
-	protected $defaults = array(
-		'driver'                    => 'native',
-		'match_ip'                  => false,
-		'match_ua'                  => true,
-		'cookie_domain'             => '',
-		'cookie_path'               => '/',
-		'cookie_http_only'          => null,
-		'encrypt_cookie'            => true,
-		'expire_on_close'           => false,
-		'expiration_time'           => 7200,
-		'rotation_time'             => 300,
-		'flash_id'                  => 'flash',
-		'flash_auto_expire'         => true,
-		'flash_expire_after_get'    => true,
-		'post_cookie_name'          => ''
+		'session.cookie',
 	);
 
 	/**
@@ -76,14 +58,14 @@ class FuelServiceProvider extends ServiceProvider
 				$config = array('driver' => $config);
 			}
 
-			$config = \Arr::merge($this->defaults, $app->getConfig()->load('session', true), $config);
+			$config = \Arr::merge($app->getConfig()->load('session', true), $config);
 
 			// determine the driver to load
 			if ($config['driver'] instanceOf Driver)
 			{
 				$driver = $config['driver'];
 			}
-			elseif (class_exists($config['driver']))
+			elseif (strpos('\\', $config['driver']) !== false and class_exists($config['driver']))
 			{
 				$class = $config['driver'];
 				$driver = new $class($config);
@@ -103,6 +85,12 @@ class FuelServiceProvider extends ServiceProvider
 
 			// return the instance
 			return $manager;
+		});
+
+		// \Fuel\Session\Driver\Cookie
+		$this->register('session.cookie', function ($dic, Array $config = array())
+		{
+			return $dic->resolve('Fuel\Session\Driver\Cookie', array($config));
 		});
 
 		// \Fuel\Session\Driver\Native
