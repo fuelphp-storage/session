@@ -10,6 +10,9 @@
 
 namespace Fuel\Session;
 
+use Fuel\Session\DataContainer;
+use Fuel\Session\FlashContainer;
+
 /**
  * Session driver interface. All Session drivers must implement this
  * interface
@@ -21,7 +24,7 @@ namespace Fuel\Session;
 abstract class Driver
 {
 	/**
-	 * @var  array  $condig  Passed configuration array
+	 * @var  array  $config  Passed configuration array
 	 */
 	protected $config = array();
 
@@ -46,12 +49,26 @@ abstract class Driver
 	);
 
 	/**
-	 * @var  Manager  Session manager instance that manages this driver
+	 * @var  Manager  $manager  Session manager instance that manages this driver
 	 */
 	protected $manager = null;
 
 	/**
-	 * @var  integer  $expiration Global session expiration
+	 * @var  DataContainer  $data  Data storage container for this session instance
+	 *
+	 * @since 2.0.0
+	 */
+	protected $data;
+
+	/**
+	 * @var  FlashContainer  $flash  Flash data storage container for this session instance
+	 *
+	 * @since 2.0.0
+	 */
+	protected $flash;
+
+	/**
+	 * @var  integer  $expiration  Global session expiration
 	 */
 	protected $expiration = null;
 
@@ -94,62 +111,47 @@ abstract class Driver
     /**
      * Create a new session
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the create operation
      *
 	 * @since  2.0.0
      */
-    abstract public function create(DataContainer $data, FlashContainer $flash);
+    abstract public function create();
 
     /**
      * Start the session
-     *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
      *
      * @return bool  result of the start operation
 	 *
 	 * @since  2.0.0
      */
-    abstract public function start(DataContainer $data, FlashContainer $flash);
+    abstract public function start();
 
     /**
      * Read session data
-     *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
      *
      * @return bool  result of the read operation
 	 *
 	 * @since  2.0.0
      */
-    abstract public function read(DataContainer $data, FlashContainer $flash);
+    abstract public function read();
 
     /**
      * Write session data
-     *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
      *
      * @return bool  result of the write operation
 	 *
 	 * @since  2.0.0
      */
-    abstract public function write(DataContainer $data, FlashContainer $flash);
+    abstract public function write();
 
     /**
      * Stop the session
-     *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
      *
      * @return bool  result of the stop operation
 	 *
 	 * @since  2.0.0
      */
-    abstract public function stop(DataContainer $data, FlashContainer $flash);
+    abstract public function stop();
 
     /**
      * Destroy the session
@@ -180,15 +182,17 @@ abstract class Driver
 	}
 
 	/**
-	 * Set the manager instance that manages this driver
+	 * Set the manager that manages this driver and container instances for this session
 	 *
      * @param  Manager  instance
      *
 	 * @since  2.0.0
 	 */
-	public function setManager(Manager $manager)
+	public function setInstances(Manager $manager, DataContainer $data, FlashContainer $flash)
 	{
 		$this->manager = $manager;
+		$this->data = $data;
+		$this->flash = $flash;
 	}
 
 	/**
@@ -205,6 +209,10 @@ abstract class Driver
 
 	/**
 	 * Get the global expiration of the entire session
+     *
+     * @return  int
+     *
+	 * @since  2.0.0
 	 */
 	public function getExpire()
 	{
@@ -213,6 +221,10 @@ abstract class Driver
 
 	/**
 	 * Set the session ID for this session
+	 *
+     * @param  string  $id  new id for this session
+     *
+	 * @since  2.0.0
 	 */
 	public function setSessionId($id)
 	{
@@ -221,6 +233,10 @@ abstract class Driver
 
 	/**
 	 * Get the session ID for this session
+     *
+     * @return  string
+     *
+	 * @since  2.0.0
 	 */
 	public function getSessionId()
 	{
@@ -229,6 +245,10 @@ abstract class Driver
 
 	/**
 	 * Set the global name of this session
+	 *
+	 * @param  string  $name  name of this session (and session cookie if present)
+     *
+	 * @since  2.0.0
 	 */
 	public function setName($name)
 	{
@@ -237,35 +257,20 @@ abstract class Driver
 
 	/**
 	 * Get the global name of this session
+     *
+     * @return  string
+     *
+	 * @since  2.0.0
 	 */
 	public function getName()
 	{
 		return $this->name;
 	}
 
-
-	/**
-	 * get session key variables
-	 *
-	 * @param	string	name of the variable to get, default is 'session_id'
-	 * @return	mixed
-	 */
-	public function getKey($name = 'SessionId')
-	{
-		if (method_exists($this, 'get'.$name))
-		{
-			return $this->{'get'.$name}();
-		}
-		elseif (property_exists($this, $name))
-		{
-			return $this->{$name};
-		}
-
-		return null;
-	}
-
 	/**
 	 * Find the current session id
+     *
+	 * @since  2.0.0
 	 */
 	protected function findSessionId()
 	{
@@ -294,8 +299,14 @@ abstract class Driver
 
 	/**
 	 * Process the session payload
+     *
+     * @param  array  $payload  retrieved raw session payload array
+     *
+     * @return bool
+     *
+	 * @since  2.0.0
 	 */
-	protected function processPayload(Array $payload, DataContainer $data, FlashContainer $flash)
+	protected function processPayload(Array $payload)
 	{
 		// verify the payload
 		if (isset($payload['security']) and isset($payload['data']) and isset($payload['flash']))
@@ -312,8 +323,8 @@ abstract class Driver
 				$this->manager->setRotationTimer($payload['security']['rt']);
 
 				// and store the data
-				$data->setContents($payload['data']);
-				$flash->setContents($payload['flash']);
+				$this->data->setContents($payload['data']);
+				$this->flash->setContents($payload['flash']);
 
 				return true;
 			}
@@ -325,15 +336,17 @@ abstract class Driver
 	/**
 	 * Process the session payload
 	 *
-	 * @return  array  the assembled session payload
+	 * @return  array  the assembled session payload array
+     *
+	 * @since  2.0.0
 	 */
-	protected function assemblePayload(DataContainer $data, FlashContainer $flash)
+	protected function assemblePayload()
 	{
-		$expiration = $this->config['expiration_time'] > 0 ? $this->config['expiration_time'] + time() : 0;
+		$expiration = $this->expiration > 0 ? $this->expiration + time() : 0;
 
 		return array(
-			'data' => $data->getContents(),
-			'flash' => $flash->getContents(),
+			'data' => $this->data->getContents(),
+			'flash' => $this->flash->getContents(),
 			'security' => array(
 				'ip' => $_SERVER['REMOTE_ADDR'],
 				'ua' => $_SERVER['HTTP_USER_AGENT'],
@@ -351,12 +364,15 @@ abstract class Driver
 	 *
 	 * @param   string    name of cookie
 	 * @param   string    value of cookie
-	 * @return  boolean
+	 *
+	 * @return  bool
+     *
+	 * @since  2.0.0
 	 */
 	protected function setCookie($name, $value)
 	{
 		// add the current time so we have an offset
-		$expiration = $this->config['expiration_time'] > 0 ? $this->config['expiration_time'] + time() : 0;
+		$expiration = $this->expiration > 0 ? $this->expiration + time() : 0;
 
 		return setcookie($name, $value, $expiration, $this->config['cookie_path'], $this->config['cookie_domain'], $this->config['cookie_secure'], $this->config['cookie_http_only']);
 	}
@@ -366,7 +382,9 @@ abstract class Driver
 	 *
 	 * @param   string   cookie name
 	 *
-	 * @return  boolean
+	 * @return  bool
+     *
+	 * @since  2.0.0
 	 */
 	protected function deleteCookie($name)
 	{

@@ -11,8 +11,6 @@
 namespace Fuel\Session\Driver;
 
 use Fuel\Session\Driver;
-use Fuel\Session\DataContainer;
-use Fuel\Session\FlashContainer;
 
 /**
  * Session driver using PHP native sessions
@@ -34,6 +32,7 @@ class Native extends Driver
 	 * Constructor
 	 *
 	 * @param  array    $config  driver configuration
+	 *
 	 * @since  2.0.0
 	 */
 	public function __construct(array $config = array())
@@ -72,39 +71,29 @@ class Native extends Driver
 		{
 			$params['lifetime'] = 0;
 		}
-		elseif (isset($config['expiration_time']))
-		{
-			$params['lifetime'] = $config['expiration_time'];
-		}
-		else
-		{
-			$params['lifetime'] = 7200;
-		}
 
-		session_set_cookie_params($params['lifetime'], $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+		session_set_cookie_params($this->expiration, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
 
 		// store the defined name
 		if (isset($config['native']['cookie_name']))
 		{
-			$this->setName($config['native']['cookie_name']);
+			$this->name = $config['native']['cookie_name'];
 		}
 	}
 
     /**
      * Create a new session
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the start operation
+     *
 	 * @since  2.0.0
      */
-    public function create(DataContainer $data, FlashContainer $flash)
+    public function create()
     {
 		// start the native session if we don't have one active yet
 		if (session_status() !== PHP_SESSION_ACTIVE)
 		{
-			$this->start($data, $flash);
+			$this->start();
 		}
 
 		// regenerate the session id and flush any existing sessions
@@ -120,13 +109,11 @@ class Native extends Driver
     /**
      * Start the session, and read existing session data back
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the start operation
+     *
 	 * @since  2.0.0
      */
-    public function start(DataContainer $data, FlashContainer $flash)
+    public function start()
     {
 		// start the native session
 		if (session_status() !== 2)
@@ -138,19 +125,17 @@ class Native extends Driver
 		$this->setSessionId(session_id());
 
 		// and read any existing session data
-		return $this->read($data, $flash);
+		return $this->read();
 	}
 
     /**
      * Read session data
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the read operation
+     *
 	 * @since  2.0.0
      */
-    public function read(DataContainer $data, FlashContainer $flash)
+    public function read()
     {
 		// bail out if we don't have an active session
 		if (session_status() !== PHP_SESSION_ACTIVE)
@@ -161,7 +146,7 @@ class Native extends Driver
 		// else fetch the data from the native session global
 		elseif (isset($_SESSION[$this->name]))
 		{
-			return $this->processPayload($_SESSION[$this->name], $data, $flash);
+			return $this->processPayload($_SESSION[$this->name]);
 		}
 
 		return false;
@@ -170,29 +155,28 @@ class Native extends Driver
     /**
      * Write session data
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the write operation
+     *
 	 * @since  2.0.0
      */
-    public function write(DataContainer $data, FlashContainer $flash)
+    public function write()
     {
 		// not implemented in the native driver, flush the data through a stop/start
-		$this->stop($data, $flash);
-		$this->start($data, $flash);
+		$stop = $this->stop();
+		$start = $this->start();
+
+		// only return true if both succeeded
+		return ($stop and $start);
 	}
 
     /**
      * Stop the session
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the write operation
+	 *
 	 * @since  2.0.0
      */
-    public function stop(DataContainer $data, FlashContainer $flash)
+    public function stop()
     {
 		// bail out if we don't have an active session
 		if (session_status() !== PHP_SESSION_ACTIVE)
@@ -211,6 +195,7 @@ class Native extends Driver
      * Destroy the session
      *
      * @return bool  result of the write operation
+	 *
 	 * @since  2.0.0
      */
     public function destroy()
@@ -225,11 +210,7 @@ class Native extends Driver
 			// delete the session cookie if present
 			if (ini_get('session.use_cookies'))
 			{
-				$params = session_get_cookie_params();
-				setcookie(session_name(), '', time() - 42000,
-					$params['path'], $params['domain'],
-					$params['secure'], $params['httponly']
-				);
+				$this->deleteCookie(session_name());
 			}
 
 			// unset all native session data
@@ -256,9 +237,14 @@ class Native extends Driver
 
 	/**
 	 * Set the global expiration of the entire session
+	 *
+     * @param  int  session expiration time in seconds of inactivity
+     *
+	 * @since  2.0.0
 	 */
 	public function setExpire($expiry)
 	{
+		// set the expiry on the session cache
 		session_cache_expire($expiry);
 
 		// set the cookie expiry to match the expiration set

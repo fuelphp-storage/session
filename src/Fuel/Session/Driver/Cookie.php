@@ -11,8 +11,6 @@
 namespace Fuel\Session\Driver;
 
 use Fuel\Session\Driver;
-use Fuel\Session\DataContainer;
-use Fuel\Session\FlashContainer;
 
 /**
  * Session driver using session emulation via cookies
@@ -41,6 +39,7 @@ class Cookie extends Driver
 	 * Constructor
 	 *
 	 * @param  array    $config  driver configuration
+	 *
 	 * @since  2.0.0
 	 */
 	public function __construct(array $config = array())
@@ -54,59 +53,53 @@ class Cookie extends Driver
 		// store the defined name
 		if (isset($config['cookie']['cookie_name']))
 		{
-			$this->setName($config['cookie']['cookie_name']);
+			$this->name = $config['cookie']['cookie_name'];
 		}
 	}
 
     /**
      * Create a new session
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
+     * @return bool  result of the create operation
      *
-     * @return bool  result of the start operation
 	 * @since  2.0.0
      */
-    public function create(DataContainer $data, FlashContainer $flash)
+    public function create()
     {
 		// start the session
 		if ( ! $this->started)
 		{
-			$this->start($data, $flash);
+			return $this->start();
 		}
+
+		// session already started
+		return false;
 	}
 
     /**
      * Start the session, and read existing session data back
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the start operation
+     *
 	 * @since  2.0.0
      */
-    public function start(DataContainer $data, FlashContainer $flash)
+    public function start()
     {
-		// generate a new session id
-		$this->regenerate();
-
 		// mark the session as started
 		$this->started = true;
 
 		// and read any existing session data
-		return $this->read($data, $flash);
+		return $this->read();
 	}
 
     /**
      * Read session data
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the read operation
+     *
 	 * @since  2.0.0
      */
-    public function read(DataContainer $data, FlashContainer $flash)
+    public function read()
     {
 		// bail out if we don't have an active session
 		if ($this->started)
@@ -124,7 +117,7 @@ class Cookie extends Driver
 					$payload = unserialize($payload);
 
 					// verify and process the payload
-					return $this->processPayload($payload, $data, $flash);
+					return $this->processPayload($payload);
 				}
 			}
 		}
@@ -136,42 +129,48 @@ class Cookie extends Driver
     /**
      * Write session data
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the write operation
+     *
 	 * @since  2.0.0
      */
-    public function write(DataContainer $data, FlashContainer $flash)
+    public function write()
     {
 		// not implemented in the cookie driver, flush the data through a stop/start
-		$this->stop($data, $flash);
-		$this->start($data, $flash);
+		$stop = $this->stop();
+		$start = $this->start();
+
+		// only return true if both succeeded
+		return ($stop and $start);
 	}
 
     /**
      * Stop the session
      *
-     * @param  DataContainer $data
-     * @param  FlashContainer $flash
-     *
      * @return bool  result of the write operation
+     *
 	 * @since  2.0.0
      */
-    public function stop(DataContainer $data, FlashContainer $flash)
+    public function stop()
     {
 		// bail out if we don't have an active session
 		if ( ! $this->started)
 		{
 			return false;
 		}
-		$payload = $this->encrypt(serialize($this->assemblePayload($data, $flash)));
 
+		// construct the payload
+		$payload = $this->encrypt(serialize($this->assemblePayload()));
+
+		// make sure it's within cookie specs
 		if (strlen($payload) > 4096)
 		{
 			throw new \RuntimeException('The payload of the session cookie exceeds the maximum size of 4Kb. Use a different storage driver or reduce the size of your session.');
 		}
 
+		// mark the session as stopped
+		$this->started = false;
+
+		// and set the session cookie
 		return $this->setCookie(
 			$this->name,
 			$payload
@@ -182,6 +181,7 @@ class Cookie extends Driver
      * Destroy the session
      *
      * @return bool  result of the write operation
+     *
 	 * @since  2.0.0
      */
     public function destroy()
@@ -189,9 +189,17 @@ class Cookie extends Driver
 		// we need to have a session started
 		if ($this->started)
 		{
+			// mark the session as stopped
+			$this->started = false;
+
+			// reset the session containers
+			$this->manager->reset();
+
+			// delete the session cookie
 			return $this->deleteCookie($this->name);
 		}
 
+		// session was not started
 		return false;
 	}
 
@@ -199,15 +207,22 @@ class Cookie extends Driver
 	 * Encrypts a string using the crypt_key configured in the config
 	 *
 	 * @param   string    string to be encrypted
+	 *
+	 * @throws  BadMethodCallException  when the required mcrypt extension is not installed
+	 *
 	 * @return  encrypted string
+	 *
+	 * @since  2.0.0
 	 */
 	protected function encrypt($string)
 	{
+		// only if we want the cookie to be encrypted
 		if ($this->config['cookie']['encrypt_cookie'])
 		{
+			// we require the mcrypt PECL extension for this
 			if ( ! function_exists('mcrypt_encrypt'))
 			{
-				throw new \Exception('The Session Cookie driver requires the PHP mcrypt extension to work securely.');
+				throw new \BadMethodCallException('The Session Cookie driver requires the PHP mcrypt extension to be installed.');
 			}
 
 			// create the encyption key
@@ -217,10 +232,11 @@ class Cookie extends Driver
 			$iv = mcrypt_create_iv(mcrypt_get_iv_size(MCRYPT_RIJNDAEL_128, MCRYPT_MODE_CBC), MCRYPT_RAND);
 			if (strlen($iv_base64 = rtrim(base64_encode($iv), '=')) != 22)
 			{
+				// invalid IV
 				return false;
 			}
 
-			// return the encrypted payload
+			// construct the encrypted payload
 			$string = $iv_base64.base64_encode(mcrypt_encrypt(MCRYPT_RIJNDAEL_128, $key, $string.md5($string), MCRYPT_MODE_CBC, $iv));
 		}
 
@@ -231,15 +247,22 @@ class Cookie extends Driver
 	 * Decrypts a string using the crypt_key configured in the config
 	 *
 	 * @param   string    string to be decrypted
+	 *
+	 * @throws  BadMethodCallException  when the required mcrypt extension is not installed
+	 *
 	 * @return  decrypted string
+	 *
+	 * @since  2.0.0
 	 */
 	protected function decrypt($string)
 	{
+		// only if we want the cookie to be encrypted
 		if ($this->config['cookie']['encrypt_cookie'])
 		{
+			// we require the mcrypt PECL extension for this
 			if ( ! function_exists('mcrypt_decrypt'))
 			{
-				throw new \Exception('The Session Cookie driver requires the PHP mcrypt extension to work securely.');
+				throw new \BadMethodCallException('The Session Cookie driver requires the PHP mcrypt extension to be installed.');
 			}
 
 			// create the encyption key
@@ -256,7 +279,7 @@ class Cookie extends Driver
 			$hash = substr($string, -32);
 			$string = substr($string, 0, -32);
 
-			// make sure it wasn't tampered with
+			// double-check it wasn't tampered with
 			if (md5($string) != $hash)
 			{
 				return false;
