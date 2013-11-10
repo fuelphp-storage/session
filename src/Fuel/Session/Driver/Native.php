@@ -15,6 +15,10 @@ use Fuel\Session\Driver;
 /**
  * Session driver using PHP native sessions
  *
+ * NOTE: this driver is thread-safe, PHP flock's the session file which will
+ * cause concurrent/async requests to be processed synchroneously. This may
+ * have an impact on performance of ajax applications in particular.
+ *
  * @package  Fuel\Session
  *
  * @since  2.0.0
