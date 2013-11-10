@@ -342,8 +342,16 @@ abstract class Driver
 	 */
 	protected function assemblePayload()
 	{
+		// calculate the expiration
 		$expiration = $this->expiration > 0 ? $this->expiration + time() : 0;
 
+		// make sure we have a sessionId
+		if ($this->sessionId === null)
+		{
+			$this->regenerate();
+		}
+
+		// return the assembled payload
 		return array(
 			'data' => $this->data->getContents(),
 			'flash' => $this->flash->getContents(),
