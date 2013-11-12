@@ -118,6 +118,12 @@ class Cookie extends Driver
 					// unserialize it
 					$payload = unserialize($payload);
 
+					// restore the session id if needed
+					if (isset($payload['security']['id']))
+					{
+						$this->sessionId = $payload['security']['id'];
+					}
+
 					// verify and process the payload
 					return $this->processPayload($payload);
 				}
