@@ -31,6 +31,7 @@ class FuelServiceProvider extends ServiceProvider
 		'session',
 		'session.native',
 		'session.cookie',
+		'session.file',
 	);
 
 	/**
@@ -97,6 +98,12 @@ class FuelServiceProvider extends ServiceProvider
 		$this->register('session.native', function ($dic, Array $config = array())
 		{
 			return $dic->resolve('Fuel\Session\Driver\Native', array($config));
+		});
+
+		// \Fuel\Session\Driver\File
+		$this->register('session.file', function ($dic, Array $config = array())
+		{
+			return $dic->resolve('Fuel\Session\Driver\File', array($config));
 		});
 	}
 }
