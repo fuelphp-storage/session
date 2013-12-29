@@ -73,10 +73,10 @@ class FuelServiceProvider extends ServiceProvider
 			}
 			else
 			{
-				$driver = $dic->resolve('session.'.$config['driver'], array($config));
+				$driver = $dic->resolve('session.'.strtolower($config['driver']), array($config));
 			}
 
-			$manager = $dic->resolve('Fuel\Session\Manager', array($driver, $config));
+			$manager = $dic->resolve('Fuel\Session\Manager', array($driver, $config, $app));
 
 			// start the session
 			$manager->start();

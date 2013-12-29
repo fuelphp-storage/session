@@ -34,6 +34,13 @@ class Manager
 	protected $config;
 
 	/**
+	 * @var  Fuel\Foundation\Applidation  $app  Application instance
+	 *
+	 * @since 2.0.0
+	 */
+	protected $app;
+
+	/**
 	 * @var  DataContainer  $data  Data storage container for this session instance
 	 *
 	 * @since 2.0.0
@@ -66,11 +73,12 @@ class Manager
 	 *
 	 * @since 2.0.0
 	 */
-	public function __construct(Driver $driver, Array $config = array())
+	public function __construct(Driver $driver, Array $config = array(), $app = null)
 	{
 		// store the driver and config
 		$this->driver = $driver;
 		$this->config = $config;
+		$this->app = $app;
 
 		// create the containers
 		$this->reset();
@@ -91,6 +99,16 @@ class Manager
 		{
 			$this->rotationInterval = (int) $config['rotation_time'];
 			$this->rotationTimer = time() + $this->rotationInterval;
+		}
+
+		// any namespace defined?
+		if (isset($config['namespace']))
+		{
+			if ($config['namespace'] === true)
+			{
+				$config['namespace'] = $app ? $app->getName() : false;
+			}
+			$this->setNamespace($config['namespace']);
 		}
 
 		// any flash namespace defined?
@@ -282,6 +300,41 @@ class Manager
 		$this->rotationTimer = $time;
 
 		return $this;
+	}
+
+	/**
+	 * Set the session namespace
+	 *
+	 * @param	string	name of the namespace to set
+	 *
+	 * @return	Fuel\Session\Manager
+	 *
+	 * @since 2.0.0
+	 */
+	public function setNamespace($name)
+	{
+		$this->config['namespace'] = is_bool($name) ? $name : (string) $name;
+
+		if ($this->config['namespace'] === true)
+		{
+			$this->config['namespace'] = $this->app ? $app->getName() : false;
+		}
+
+		$this->data->setNamespace($this->config['namespace']);
+
+		return $this;
+	}
+
+	/**
+	 * Get the current session namespace
+	 *
+	 * @return	string	name of the namespace
+	 *
+	 * @since 2.0.0
+	 */
+	public function getNamespace()
+	{
+		return $this->config['namespace'];
 	}
 
 	/**

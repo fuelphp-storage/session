@@ -41,6 +41,7 @@ abstract class Driver
 		'expire_on_close'           => false,
 		'expiration_time'           => 7200,
 		'rotation_time'             => 300,
+		'namespace'                 => false,
 		'flash_namespace'           => 'flash',
 		'flash_auto_expire'         => true,
 		'post_cookie_name'          => '',
