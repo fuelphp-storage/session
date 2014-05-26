@@ -19,7 +19,6 @@
 		"mockery/mockery": "0.7.*"
 	},
 	"autoload": {
-		"psr-0": { "Fuel\\Session": "src/" }
-	},
-	"minimum-stability": "dev"
+		"psr-4": { "Fuel\\Session\\": "src/" }
+	}
 }
