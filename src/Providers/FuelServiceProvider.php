@@ -46,11 +46,11 @@ class FuelServiceProvider extends ServiceProvider
 			$stack = $this->container->resolve('requeststack');
 			if ($request = $stack->top())
 			{
-				$app = $request->getApplication();
+				$component = $request->getComponent();
 			}
 			else
 			{
-				$app = $this->container->resolve('application.main');
+				$component = $this->container->resolve('application::__main')->getComponent();
 			}
 
 			// check if only a driver name or object is passed
@@ -59,7 +59,7 @@ class FuelServiceProvider extends ServiceProvider
 				$config = array('driver' => $config);
 			}
 
-			$config = \Arr::merge($app->getConfig()->load('session', true), $config);
+			$config = \Arr::merge($component->getConfig()->load('session', true), $config);
 
 			// determine the driver to load
 			if ($config['driver'] instanceOf Driver)
@@ -76,13 +76,13 @@ class FuelServiceProvider extends ServiceProvider
 				$driver = $dic->resolve('session.'.strtolower($config['driver']), array($config));
 			}
 
-			$manager = $dic->resolve('Fuel\Session\Manager', array($driver, $config, $app));
+			$manager = $dic->resolve('Fuel\Session\Manager', array($driver, $config, $component->getApplication()));
 
 			// start the session
 			$manager->start();
 
 			// and use the applications' event instance make sure it ends too
-			$app->getEvent()->on('shutdown', function($event) { $this->stop(); }, $manager);
+			$component->getApplication()->getEvent()->on('shutdown', function($event) { $this->stop(); }, $manager);
 
 			// return the instance
 			return $manager;
