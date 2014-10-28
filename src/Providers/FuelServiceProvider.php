@@ -50,7 +50,7 @@ class FuelServiceProvider extends ServiceProvider
 			}
 			else
 			{
-				$component = $this->container->resolve('application::__main')->getComponent();
+				$component = $this->container->resolve('application::__main')->getRootComponent();
 			}
 
 			// check if only a driver name or object is passed
