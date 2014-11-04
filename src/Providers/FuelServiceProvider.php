@@ -81,8 +81,12 @@ class FuelServiceProvider extends ServiceProvider
 			// start the session
 			$manager->start();
 
+			$event = $component->getApplication()->getEvent();
+
 			// and use the applications' event instance make sure it ends too
-			$component->getApplication()->getEvent()->on('shutdown', function($event) { $this->stop(); }, $manager);
+			$event->addListener('shutdown', function($event) use ($manager) {
+				$manager->stop();
+			});
 
 			// return the instance
 			return $manager;
