@@ -1,7 +1,6 @@
 {
 	"name": "fuelphp/session",
-	"type": "library",
-	"description": ".",
+	"description": "Fuel session manager",
 	"keywords": ["Sessions"],
 	"homepage": "https://github.com/fuelphp/session",
 	"license": "MIT",
@@ -16,9 +15,16 @@
 		"fuelphp/common": "~2.0"
 	},
 	"require-dev": {
-		"mockery/mockery": "0.7.*"
+		"codeception/codeception": "~2.0"
 	},
 	"autoload": {
-		"psr-4": { "Fuel\\Session\\": "src/" }
+		"psr-4": {
+			"Fuel\\Session\\": "src/"
+		}
+	},
+	"extra": {
+		"branch-alias": {
+			"dev-master": "2.0-dev"
+		}
 	}
 }

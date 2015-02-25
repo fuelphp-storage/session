@@ -4,7 +4,7 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2015 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
@@ -18,28 +18,20 @@ use Fuel\Session\Driver;
  * NOTE: this driver is thread-safe, PHP flock's the session file which will
  * cause concurrent/async requests to be processed synchroneously. This may
  * have an impact on performance of ajax applications in particular.
- *
- * @package  Fuel\Session
- *
- * @since  2.0.0
  */
 class Native extends Driver
 {
 	/**
-	 * @var  array  session driver config defaults
+	 * @var array
 	 */
-	protected $defaults = array(
-		'cookie_name'           => 'fuelnid',
-	);
+	protected $defaults = [
+		'cookie_name' => 'fuelnid',
+	];
 
 	/**
-	 * Constructor
-	 *
-	 * @param  array    $config  driver configuration
-	 *
-	 * @since  2.0.0
+	 * @param array $config
 	 */
-	public function __construct(array $config = array())
+	public function __construct(array $config = [])
 	{
 		// make sure we've got all config elements for this driver
 		$config['native'] = array_merge($this->defaults, isset($config['native']) ? $config['native'] : array());
@@ -85,15 +77,11 @@ class Native extends Driver
 		}
 	}
 
-    /**
-     * Create a new session
-     *
-     * @return bool  result of the start operation
-     *
-	 * @since  2.0.0
-     */
-    public function create()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function create()
+	{
 		// start the native session if we don't have one active yet
 		if (session_status() !== PHP_SESSION_ACTIVE)
 		{
@@ -110,15 +98,11 @@ class Native extends Driver
 		return $result;
 	}
 
-    /**
-     * Start the session, and read existing session data back
-     *
-     * @return bool  result of the start operation
-     *
-	 * @since  2.0.0
-     */
-    public function start()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function start()
+	{
 		// start the native session
 		if (session_status() !== 2)
 		{
@@ -132,15 +116,11 @@ class Native extends Driver
 		return $this->read();
 	}
 
-    /**
-     * Read session data
-     *
-     * @return bool  result of the read operation
-     *
-	 * @since  2.0.0
-     */
-    public function read()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function read()
+	{
 		// bail out if we don't have an active session
 		if (session_status() !== PHP_SESSION_ACTIVE)
 		{
@@ -156,15 +136,11 @@ class Native extends Driver
 		return false;
 	}
 
-    /**
-     * Write session data
-     *
-     * @return bool  result of the write operation
-     *
-	 * @since  2.0.0
-     */
-    public function write()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function write()
+	{
 		// not implemented in the native driver, flush the data through a stop/start
 		$stop = $this->stop();
 		$start = $this->start();
@@ -173,15 +149,11 @@ class Native extends Driver
 		return ($stop and $start);
 	}
 
-    /**
-     * Stop the session
-     *
-     * @return bool  result of the write operation
-	 *
-	 * @since  2.0.0
-     */
-    public function stop()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function stop()
+	{
 		// bail out if we don't have an active session
 		if (session_status() !== PHP_SESSION_ACTIVE)
 		{
@@ -195,15 +167,11 @@ class Native extends Driver
 		return true;
 	}
 
-    /**
-     * Destroy the session
-     *
-     * @return bool  result of the write operation
-	 *
-	 * @since  2.0.0
-     */
-    public function destroy()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function destroy()
+	{
 		// bail out if we don't have an active session
 		if (session_status() !== PHP_SESSION_ACTIVE)
 		{
@@ -225,13 +193,13 @@ class Native extends Driver
 		}
 	}
 
-    /**
-     * Regerate the session, rotate the session id
-     *
+	/**
+	 * Regerate the session, rotate the session id
+	 *
 	 * @since  2.0.0
-     */
-    public function regenerate()
-    {
+	 */
+	public function regenerate()
+	{
 		// regenerate the session id
 		session_regenerate_id();
 
@@ -242,8 +210,8 @@ class Native extends Driver
 	/**
 	 * Set the global expiration of the entire session
 	 *
-     * @param  int  session expiration time in seconds of inactivity
-     *
+	 * @param  int  session expiration time in seconds of inactivity
+	 *
 	 * @since  2.0.0
 	 */
 	public function setExpire($expiry)

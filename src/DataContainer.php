@@ -4,7 +4,7 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2015 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
@@ -14,24 +14,18 @@ use Fuel\Common\DataContainer as Container;
 
 /**
  * Session Data container
- *
- * @package  Fuel\Session
- *
- * @since  2.0.0
  */
 class DataContainer extends Container
 {
 	/**
-	 * @var  string  $namespace  current namespace
+	 * @var string
 	 */
 	protected $namespace = false;
 
 	/**
-	 * set session namespace
+	 * Sets session namespace
 	 *
-	 * @param  mixed  namespace
-	 *
-	 * @return  void
+	 * @param string $name
 	 */
 	public function setNamespace($name)
 	{
@@ -44,13 +38,11 @@ class DataContainer extends Container
 	}
 
 	/**
-	 * Check if a key was set upon this bag's data
+	 * Checks if a key was set upon this bag's data
 	 *
-	 * @param   string  $key
+	 * @param string $key
 	 *
-	 * @return  bool
-	 *
-	 * @since   2.0.0
+	 * @return boolean
 	 */
 	public function has($key)
 	{
@@ -58,14 +50,12 @@ class DataContainer extends Container
 	}
 
 	/**
-	 * Get a key's value from this bag's data
+	 * Returns a key's value from this bag's data
 	 *
-	 * @param   string  $key
-	 * @param   mixed   $default
+	 * @param string $key
+	 * @param mixed  $default
 	 *
-	 * @return  mixed
-	 *
-	 * @since   2.0.0
+	 * @return mixed
 	 */
 	public function get($key, $default = null)
 	{
@@ -73,15 +63,13 @@ class DataContainer extends Container
 	}
 
 	/**
-	 * Set a config value
+	 * Sets a config value
 	 *
-	 * @param   string  $key
-	 * @param   mixed   $value
-	 * @param   int     $expiry  optional variable expiry override
+	 * @param string  $key
+	 * @param mixed   $value
+	 * @param integer $expiry
 	 *
 	 * @throws  \RuntimeException
-	 *
-	 * @since   2.0.0
 	 */
 	public function set($key, $value, $expiry = null)
 	{
@@ -96,13 +84,11 @@ class DataContainer extends Container
 	}
 
 	/**
-	 * Delete data from the container
+	 * Deletes data from the container
 	 *
-	 * @param   string   $key  key to delete
+	 * @param string $key
 	 *
-	 * @return  boolean  delete success or failure
-	 *
-	 * @since   2.0.0
+	 * @return boolean
 	 */
 	public function delete($key)
 	{
@@ -111,11 +97,11 @@ class DataContainer extends Container
 	}
 
 	/**
-	 * Prefix the container key with the namespace currently set
+	 * Prefixws the container key with the namespace currently set
 	 *
-	 * @param   string  $key
+	 * @param string $key
 	 *
-	 * @return   string  key
+	 * @return string
 	 */
 	protected function prefixKey($key)
 	{

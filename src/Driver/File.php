@@ -4,7 +4,7 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2015 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
@@ -16,38 +16,30 @@ use Fuel\Session\Driver;
  * Session driver using a file backend
  *
  * NOTE: this driver is not thread-safe.
- *
- * @package  Fuel\Session
- *
- * @since  2.0.0
  */
 class File extends Driver
 {
 	/**
-	 * @var  array  session driver config defaults
+	 * @var array
 	 */
-	protected $defaults = array(
-		'cookie_name'       => 'fuelfid',
-		'path'              => '/tmp',
-		'gc_probability'    => 5
-	);
+	protected $defaults = [
+		'cookie_name'    => 'fuelfid',
+		'path'           => '/tmp',
+		'gc_probability' => 5,
+	];
 
 	/**
-	 * @var  bool  flag to indicate session state
+	 * @var boolean
 	 */
 	protected $started = false;
 
 	/**
-	 * Constructor
-	 *
-	 * @param  array    $config  driver configuration
-	 *
-	 * @since  2.0.0
+	 * @param array $config
 	 */
-	public function __construct(array $config = array())
+	public function __construct(array $config = [])
 	{
 		// make sure we've got all config elements for this driver
-		$config['file'] = array_merge($this->defaults, isset($config['file']) ? $config['file'] : array());
+		$config['file'] = array_merge($this->defaults, isset($config['file']) ? $config['file'] : []);
 
 		// validate the path
 		if ( ! $path = realpath($config['file']['path']))
@@ -67,11 +59,7 @@ class File extends Driver
 	}
 
 	/**
-	 * Create a new session
-	 *
-	 * @return bool  result of the start operation
-	 *
-	 * @since  2.0.0
+	 * {@inheritdoc}
 	 */
 	public function create()
 	{
@@ -95,11 +83,7 @@ class File extends Driver
 	}
 
 	/**
-	 * Start the session, and read existing session data back
-	 *
-	 * @return bool  result of the start operation
-	 *
-	 * @since  2.0.0
+	 * {@inheritdoc}
 	 */
 	public function start()
 	{
@@ -111,11 +95,7 @@ class File extends Driver
 	}
 
 	/**
-	 * Read session data
-	 *
-	 * @return bool  result of the write operation
-	 *
-	 * @since  2.0.0
+	 * {@inheritdoc}
 	 */
 	public function read()
 	{
@@ -144,11 +124,7 @@ class File extends Driver
 	}
 
 	/**
-	 * Write session data
-	 *
-	 * @return bool  result of the write operation
-	 *
-	 * @since  2.0.0
+	 * {@inheritdoc}
 	 */
 	public function write()
 	{
@@ -163,11 +139,7 @@ class File extends Driver
 	}
 
 	/**
-	 * Stop the session
-	 *
-	 * @return bool  result of the write operation
-	 *
-	 * @since  2.0.0
+	 * {@inheritdoc}
 	 */
 	public function stop()
 	{
@@ -213,11 +185,7 @@ class File extends Driver
 	}
 
 	/**
-	 * Destroy the session
-	 *
-	 * @return bool  result of the write operation
-	 *
-	 * @since  2.0.0
+	 * {@inheritdoc}
 	 */
 	public function destroy()
 	{
@@ -250,7 +218,7 @@ class File extends Driver
 	/**
 	 * Writes the session file
 	 *
-	 * @return  boolean, true if the write was successful, false if not
+	 * @return boolean
 	 */
 	protected function writeFile($payload)
 	{
@@ -286,7 +254,7 @@ class File extends Driver
 	/**
 	 * Reads the session file
 	 *
-	 * @return  mixed, the payload if the file exists, or false if not
+	 * @return string|boolean
 	 */
 	protected function readFile()
 	{

@@ -4,7 +4,7 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2015 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
@@ -16,35 +16,27 @@ use Fuel\Session\Driver;
  * Session driver using session emulation via cookies
  *
  * NOTE: this driver is not thread-safe.
- *
- * @package  Fuel\Session
- *
- * @since  2.0.0
  */
 class Cookie extends Driver
 {
 	/**
-	 * @var  array  session driver config defaults
+	 * @var array
 	 */
-	protected $defaults = array(
-		'cookie_name'           => 'fuelcid',
-		'encrypt_cookie'        => true,
-		'crypt_key'             => '',
-	);
+	protected $defaults = [
+		'cookie_name'    => 'fuelcid',
+		'encrypt_cookie' => true,
+		'crypt_key'      => '',
+	];
 
 	/**
-	 * @var  bool  flag to indicate session state
+	 * @var boolean
 	 */
 	protected $started = false;
 
 	/**
-	 * Constructor
-	 *
-	 * @param  array    $config  driver configuration
-	 *
-	 * @since  2.0.0
+	 * @param array $config
 	 */
-	public function __construct(array $config = array())
+	public function __construct(array $config = [])
 	{
 		// make sure we've got all config elements for this driver
 		$config['cookie'] = array_merge($this->defaults, isset($config['cookie']) ? $config['cookie'] : array());
@@ -59,15 +51,11 @@ class Cookie extends Driver
 		}
 	}
 
-    /**
-     * Create a new session
-     *
-     * @return bool  result of the create operation
-     *
-	 * @since  2.0.0
-     */
-    public function create()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function create()
+	{
 		// start the session
 		if ( ! $this->started)
 		{
@@ -78,15 +66,11 @@ class Cookie extends Driver
 		return false;
 	}
 
-    /**
-     * Start the session, and read existing session data back
-     *
-     * @return bool  result of the start operation
-     *
-	 * @since  2.0.0
-     */
-    public function start()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function start()
+	{
 		// mark the session as started
 		$this->started = true;
 
@@ -94,15 +78,11 @@ class Cookie extends Driver
 		return $this->read();
 	}
 
-    /**
-     * Read session data
-     *
-     * @return bool  result of the read operation
-     *
-	 * @since  2.0.0
-     */
-    public function read()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function read()
+	{
 		// bail out if we don't have an active session
 		if ($this->started)
 		{
@@ -134,15 +114,11 @@ class Cookie extends Driver
 		return false;
 	}
 
-    /**
-     * Write session data
-     *
-     * @return bool  result of the write operation
-     *
-	 * @since  2.0.0
-     */
-    public function write()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function write()
+	{
 		// not implemented in the cookie driver, flush the data through a stop/start
 		$stop = $this->stop();
 		$start = $this->start();
@@ -151,15 +127,11 @@ class Cookie extends Driver
 		return ($stop and $start);
 	}
 
-    /**
-     * Stop the session
-     *
-     * @return bool  result of the write operation
-     *
-	 * @since  2.0.0
-     */
-    public function stop()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function stop()
+	{
 		// bail out if we don't have an active session
 		if ( ! $this->started)
 		{
@@ -185,15 +157,11 @@ class Cookie extends Driver
 		);
 	}
 
-    /**
-     * Destroy the session
-     *
-     * @return bool  result of the write operation
-     *
-	 * @since  2.0.0
-     */
-    public function destroy()
-    {
+	/**
+	 * {@inheritdoc}
+	 */
+	public function destroy()
+	{
 		// we need to have a session started
 		if ($this->started)
 		{
@@ -214,13 +182,11 @@ class Cookie extends Driver
 	/**
 	 * Encrypts a string using the crypt_key configured in the config
 	 *
-	 * @param   string    string to be encrypted
+	 * @param string $string
 	 *
-	 * @throws  BadMethodCallException  when the required mcrypt extension is not installed
+	 * @return string
 	 *
-	 * @return  encrypted string
-	 *
-	 * @since  2.0.0
+	 * @throws \BadMethodCallException  if the required mcrypt extension is not installed
 	 */
 	protected function encrypt($string)
 	{
@@ -254,13 +220,11 @@ class Cookie extends Driver
 	/**
 	 * Decrypts a string using the crypt_key configured in the config
 	 *
-	 * @param   string    string to be decrypted
+	 * @param string $string
 	 *
-	 * @throws  BadMethodCallException  when the required mcrypt extension is not installed
+	 * @return string
 	 *
-	 * @return  decrypted string
-	 *
-	 * @since  2.0.0
+	 * @throws \BadMethodCallException  if the required mcrypt extension is not installed
 	 */
 	protected function decrypt($string)
 	{

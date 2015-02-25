@@ -4,7 +4,7 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2015 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
@@ -16,81 +16,69 @@ use Fuel\Session\FlashContainer;
 /**
  * Session driver interface. All Session drivers must implement this
  * interface
- *
- * @package  Fuel\Session
- *
- * @since  2.0.0
  */
 abstract class Driver
 {
 	/**
-	 * @var  array  $config  Passed configuration array
+	 * @var array
 	 */
-	protected $config = array();
+	protected $config = [];
 
 	/**
-	 * @var  array  global session config defaults
+	 * @var array
 	 */
-	protected $globalDefaults = array(
-		'match_ip'                  => false,
-		'match_ua'                  => true,
-		'cookie_domain'             => '',
-		'cookie_path'               => '/',
-		'cookie_secure'             => false,
-		'cookie_http_only'          => null,
-		'expire_on_close'           => false,
-		'expiration_time'           => 7200,
-		'rotation_time'             => 300,
-		'namespace'                 => false,
-		'flash_namespace'           => 'flash',
-		'flash_auto_expire'         => true,
-		'post_cookie_name'          => '',
-		'http_header_name'          => 'Session-Id',
-		'enable_cookie'             => true,
-	);
+	protected $globalDefaults = [
+		'match_ip'          => false,
+		'match_ua'          => true,
+		'cookie_domain'     => '',
+		'cookie_path'       => '/',
+		'cookie_secure'     => false,
+		'cookie_http_only'  => null,
+		'expire_on_close'   => false,
+		'expiration_time'   => 7200,
+		'rotation_time'     => 300,
+		'namespace'         => false,
+		'flash_namespace'   => 'flash',
+		'flash_auto_expire' => true,
+		'post_cookie_name'  => '',
+		'http_header_name'  => 'Session-Id',
+		'enable_cookie'     => true,
+	];
 
 	/**
-	 * @var  Manager  $manager  Session manager instance that manages this driver
+	 * @var Manager
 	 */
-	protected $manager = null;
+	protected $manager;
 
 	/**
-	 * @var  DataContainer  $data  Data storage container for this session instance
-	 *
-	 * @since 2.0.0
+	 * @var DataContainer
 	 */
 	protected $data;
 
 	/**
-	 * @var  FlashContainer  $flash  Flash data storage container for this session instance
-	 *
-	 * @since 2.0.0
+	 * @var FlashContainer
 	 */
 	protected $flash;
 
 	/**
-	 * @var  integer  $expiration  Global session expiration
+	 * @var integer
 	 */
 	protected $expiration = null;
 
 	/**
-	 * @var  string  $sessionid  ID used to identify this drivers session
+	 * @var string
 	 */
 	protected $sessionId = null;
 
 	/**
-	 * @var  string  $name  Name used to identify this session
+	 * @var string
 	 */
 	protected $name = 'fuelsession';
 
 	/**
-	 * Constructor
-	 *
-	 * @param  array    $config  driver configuration
-	 *
-	 * @since  2.0.0
+	 * @param array $config
 	 */
-	public function __construct(array $config = array())
+	public function __construct(array $config = [])
 	{
 		// make sure we've got all the config values
 		$config = array_merge($this->globalDefaults, $config);
@@ -110,63 +98,49 @@ abstract class Driver
 	}
 
     /**
-     * Create a new session
+     * Creates a new session
      *
-     * @return bool  result of the create operation
-     *
-	 * @since  2.0.0
+     * @return boolean
      */
     abstract public function create();
 
     /**
-     * Start the session
+     * Starts the session
      *
-     * @return bool  result of the start operation
-	 *
-	 * @since  2.0.0
+     * @return boolean
      */
     abstract public function start();
 
     /**
-     * Read session data
+     * Reads session data
      *
-     * @return bool  result of the read operation
-	 *
-	 * @since  2.0.0
+     * @return boolean
      */
     abstract public function read();
 
     /**
-     * Write session data
+     * Writes session data
      *
-     * @return bool  result of the write operation
-	 *
-	 * @since  2.0.0
+     * @return boolean
      */
     abstract public function write();
 
     /**
-     * Stop the session
+     * Stops the session
      *
-     * @return bool  result of the stop operation
-	 *
-	 * @since  2.0.0
+     * @return boolean
      */
     abstract public function stop();
 
     /**
-     * Destroy the session
+     * Destroys the session
      *
-     * @return bool  result of the destroy operation
-	 *
-	 * @since  2.0.0
+     * @return boolean
      */
     abstract public function destroy();
 
     /**
-     * Regenerate the session id
-     *
-	 * @since  2.0.0
+     * Regenerates the session id
      */
     public function regenerate()
     {
@@ -183,11 +157,11 @@ abstract class Driver
 	}
 
 	/**
-	 * Set the manager that manages this driver and container instances for this session
+	 * Sets the manager that manages this driver and container instances for this session
 	 *
-     * @param  Manager  instance
-     *
-	 * @since  2.0.0
+     * @param Manager        $manager
+     * @param DataContainer  $data
+     * @param FlashContainer $data
 	 */
 	public function setInstances(Manager $manager, DataContainer $data, FlashContainer $flash)
 	{
@@ -197,23 +171,9 @@ abstract class Driver
 	}
 
 	/**
-	 * Set the global expiration of the entire session
-	 *
-     * @param  int  session expiration time in seconds of inactivity
+	 * Returns the global expiration of the entire session
      *
-	 * @since  2.0.0
-	 */
-	public function setExpire($expiry)
-	{
-		$this->expiration = $expiry;
-	}
-
-	/**
-	 * Get the global expiration of the entire session
-     *
-     * @return  int
-     *
-	 * @since  2.0.0
+     * @return integer
 	 */
 	public function getExpire()
 	{
@@ -221,23 +181,19 @@ abstract class Driver
 	}
 
 	/**
-	 * Set the session ID for this session
+	 * Sets the global expiration of the entire session
 	 *
-     * @param  string  $id  new id for this session
-     *
-	 * @since  2.0.0
+     * @param integer $expiry
 	 */
-	public function setSessionId($id)
+	public function setExpire($expiry)
 	{
-		$this->sessionId = $id;
+		$this->expiration = $expiry;
 	}
 
 	/**
-	 * Get the session ID for this session
+	 * Returns the session ID for this session
      *
-     * @return  string
-     *
-	 * @since  2.0.0
+     * @return string
 	 */
 	public function getSessionId()
 	{
@@ -245,23 +201,19 @@ abstract class Driver
 	}
 
 	/**
-	 * Set the global name of this session
+	 * Sets the session ID for this session
 	 *
-	 * @param  string  $name  name of this session (and session cookie if present)
-     *
-	 * @since  2.0.0
+     * @param string  $id
 	 */
-	public function setName($name)
+	public function setSessionId($id)
 	{
-		$this->name = $name;
+		$this->sessionId = $id;
 	}
 
 	/**
-	 * Get the global name of this session
+	 * Returns the global name of this session
      *
-     * @return  string
-     *
-	 * @since  2.0.0
+     * @return string
 	 */
 	public function getName()
 	{
@@ -269,9 +221,17 @@ abstract class Driver
 	}
 
 	/**
-	 * Find the current session id
-     *
-	 * @since  2.0.0
+	 * Sets the global name of this session
+	 *
+	 * @param string $name
+	 */
+	public function setName($name)
+	{
+		$this->name = $name;
+	}
+
+	/**
+	 * Finds the current session id
 	 */
 	protected function findSessionId()
 	{
@@ -299,13 +259,11 @@ abstract class Driver
 	}
 
 	/**
-	 * Process the session payload
+	 * Processes the session payload
      *
-     * @param  array  $payload  retrieved raw session payload array
+     * @param array $payload
      *
-     * @return bool
-     *
-	 * @since  2.0.0
+     * @return boolean
 	 */
 	protected function processPayload(Array $payload)
 	{
@@ -335,11 +293,9 @@ abstract class Driver
 	}
 
 	/**
-	 * Process the session payload
+	 * Processes the session payload
 	 *
-	 * @return  array  the assembled session payload array
-     *
-	 * @since  2.0.0
+	 * @return array
 	 */
 	protected function assemblePayload()
 	{
@@ -371,12 +327,10 @@ abstract class Driver
 	 * Sets a cookie. Note that all cookie values must be strings and no
 	 * automatic serialization will be performed!
 	 *
-	 * @param   string    name of cookie
-	 * @param   string    value of cookie
+	 * @param string $name
+	 * @param string $value
 	 *
-	 * @return  bool
-     *
-	 * @since  2.0.0
+	 * @return boolean
 	 */
 	protected function setCookie($name, $value)
 	{
@@ -387,13 +341,11 @@ abstract class Driver
 	}
 
 	/**
-	 * Deletes a cookie by making the value null and expiring it.
+	 * Deletes a cookie by making the value null and expiring it
 	 *
-	 * @param   string   cookie name
+	 * @param string $na,e
 	 *
-	 * @return  bool
-     *
-	 * @since  2.0.0
+	 * @return boolean
 	 */
 	protected function deleteCookie($name)
 	{

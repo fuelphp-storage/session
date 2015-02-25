@@ -4,40 +4,39 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2015 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
 namespace Fuel\Session\Providers;
 
 use Fuel\Session\Driver;
-
-use Fuel\Dependency\ServiceProvider;
+use League\Container\ServiceProvider;
 
 
 /**
  * FuelPHP ServiceProvider class for this package
  *
- * @package  Fuel\Session
+ * @package Fuel\Session
  *
- * @since  1.0.0
+ * @since 1.0
  */
 class FuelServiceProvider extends ServiceProvider
 {
 	/**
-	 * @var  array  list of service names provided by this provider
+	 * @var array
 	 */
-	public $provides = array(
+	protected $provides = [
 		'session',
 		'session.native',
 		'session.cookie',
 		'session.file',
-	);
+	];
 
 	/**
-	 * Service provider definitions
+	 * {@inheritdoc}
 	 */
-	public function provide()
+	public function register()
 	{
 		// \Fuel\Session\Manager
 		$this->register('session', function ($dic, $config = array())

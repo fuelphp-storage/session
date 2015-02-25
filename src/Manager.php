@@ -4,76 +4,60 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2015 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
 namespace Fuel\Session;
 
+use Fuel\Foundation\Applidation;
+
 /**
  * Session manager class
- *
- * @package  Fuel\Session
- *
- * @since  2.0.0
  */
 class Manager
 {
 	/**
-	 * @var  Driver  $driver  Storage driver used by this session instance
-	 *
-	 * @since 2.0.0
+	 * @var Driver
 	 */
 	protected $driver;
 
 	/**
-	 * @var  array  Passed configuration
-	 *
-	 * @since 2.0.0
+	 * @var array
 	 */
 	protected $config;
 
 	/**
-	 * @var  Fuel\Foundation\Applidation  $app  Application instance
-	 *
-	 * @since 2.0.0
+	 * @var Applidation
 	 */
 	protected $app;
 
 	/**
-	 * @var  DataContainer  $data  Data storage container for this session instance
-	 *
-	 * @since 2.0.0
+	 * @var DataContainer
 	 */
 	protected $data;
 
 	/**
-	 * @var  FlashContainer  $flash  Flash data storage container for this session instance
-	 *
-	 * @since 2.0.0
+	 * @var FlashContainer
 	 */
 	protected $flash;
 
 	/**
-	 * @var  mixed  $rotationInterval  Session id rotation interval, or false if rotation is disabled
-	 *
-	 * @since 2.0.0
+	 * @var mixed
 	 */
 	protected $rotationInterval;
 
 	/**
-	 * @var  integer  $rotationTimer  Unix timestamp of the last session Id rotation
-	 *
-	 * @since 2.0.0
+	 * @var integer
 	 */
 	protected $rotationTimer;
 
 	/**
-	 * Setup a session instance
-	 *
-	 * @since 2.0.0
+	 * @param Driver           $driver
+	 * @param array            $config
+	 * @param Application|null $app
 	 */
-	public function __construct(Driver $driver, Array $config = array(), $app = null)
+	public function __construct(Driver $driver, array $config = [], Application $app = null)
 	{
 		// store the driver and config
 		$this->driver = $driver;
@@ -133,12 +117,12 @@ class Manager
 	/**
 	 * Magic method, captures calls to the containers and the driver
 	 *
-	 * @param  string  $method     name of the method being called
-	 * @param  array   $arguments  arguments to pass on to the method
+	 * @param string $method
+	 * @param array  $arguments
 	 *
-	 * @return  mixed
+	 * @return mixed
 	 *
-	 * @since 2.0.0
+	 * @since 2.0
 	 */
 	public function __call($method , Array $arguments)
 	{
@@ -169,11 +153,9 @@ class Manager
 	}
 
 	/**
-	 * Create a new session
+	 * Creates a new session
 	 *
-     * @return bool  result of the start operation
-     *
-	 * @since 2.0.0
+     * @return boolean
 	 */
 	public function create()
 	{
@@ -185,11 +167,9 @@ class Manager
 	}
 
 	/**
-	 * Start a session
+	 * Starts a session
 	 *
-	 * @return	bool
-	 *
-	 * @since 2.0.0
+	 * @return boolean
 	 */
 	public function start()
 	{
@@ -197,11 +177,9 @@ class Manager
 	}
 
 	/**
-	 * Read the session data into the session store
+	 * Reads the session data into the session store
 	 *
-	 * @return	bool
-	 *
-	 * @since 2.0.0
+	 * @return boolean
 	 */
 	public function read()
 	{
@@ -209,11 +187,9 @@ class Manager
 	}
 
 	/**
-	 * Write the container data to the session store
+	 * Writes the container data to the session store
 	 *
-	 * @return	bool
-	 *
-	 * @since 2.0.0
+	 * @return boolean
 	 */
 	public function write()
 	{
@@ -227,11 +203,9 @@ class Manager
 	}
 
 	/**
-	 * Start a session
+	 * Stops a session
 	 *
-	 * @return	bool
-	 *
-	 * @since 2.0.0
+	 * @return boolean
 	 */
 	public function stop()
 	{
@@ -246,9 +220,7 @@ class Manager
 	}
 
 	/**
-	 * Rotate the session id, and reset the rotation timer if needed
-	 *
-	 * @since 2.0.0
+	 * Rotates the session id, and reset the rotation timer if needed
 	 */
 	public function rotate()
 	{
@@ -263,9 +235,7 @@ class Manager
 	}
 
 	/**
-	 * Destroy the current session
-	 *
-	 * @since 2.0.0
+	 * Destroys the current session
 	 */
 	public function destroy()
 	{
@@ -275,11 +245,9 @@ class Manager
 	}
 
 	/**
-	 * Get the current rotation interval timer
+	 * Returns the current rotation interval timer
 	 *
-	 * @return	int
-	 *
-	 * @since 2.0.0
+	 * @return integer
 	 */
 	public function getRotationTimer()
 	{
@@ -287,29 +255,29 @@ class Manager
 	}
 
 	/**
-	 * Set the rotation interval timer
+	 * Sets the rotation interval timer
 	 *
-	 * @param	int	 unix timestamp the last time the id was rotated
-	 *
-	 * @return	Fuel\Session\Manager
-	 *
-	 * @since 2.0.0
+	 * @param integer $time
 	 */
 	public function setRotationTimer($time)
 	{
 		$this->rotationTimer = $time;
-
-		return $this;
 	}
 
 	/**
-	 * Set the session namespace
+	 * Returns the current session namespace
 	 *
-	 * @param	string	name of the namespace to set
+	 * @return string
+	 */
+	public function getNamespace()
+	{
+		return $this->config['namespace'];
+	}
+
+	/**
+	 * Sets the session namespace
 	 *
-	 * @return	Fuel\Session\Manager
-	 *
-	 * @since 2.0.0
+	 * @param string $name
 	 */
 	public function setNamespace($name)
 	{
@@ -321,46 +289,12 @@ class Manager
 		}
 
 		$this->data->setNamespace($this->config['namespace']);
-
-		return $this;
 	}
 
 	/**
-	 * Get the current session namespace
+	 * Returns the current session flash namespace
 	 *
-	 * @return	string	name of the namespace
-	 *
-	 * @since 2.0.0
-	 */
-	public function getNamespace()
-	{
-		return $this->config['namespace'];
-	}
-
-	/**
-	 * Set the session flash namespace
-	 *
-	 * @param	string	name of the namespace to set
-	 *
-	 * @return	Fuel\Session\Manager
-	 *
-	 * @since 2.0.0
-	 */
-	public function setFlashNamespace($name)
-	{
-		$this->config['flash_namespace'] = (string) $name;
-
-		$this->flash->setNamespace($this->config['flash_namespace']);
-
-		return $this;
-	}
-
-	/**
-	 * Get the current session flash namespace
-	 *
-	 * @return	string	name of the flash namespace
-	 *
-	 * @since 2.0.0
+	 * @return string
 	 */
 	public function getFlashNamespace()
 	{
@@ -368,9 +302,19 @@ class Manager
 	}
 
 	/**
-	 * Reset the data and flash data containers
+	 * Sets the session flash namespace
 	 *
-	 * @since 2.0.0
+	 * @param string $name
+	 */
+	public function setFlashNamespace($name)
+	{
+		$this->config['flash_namespace'] = (string) $name;
+
+		$this->flash->setNamespace($this->config['flash_namespace']);
+	}
+
+	/**
+	 * Resets the data and flash data containers
 	 */
 	protected function reset()
 	{

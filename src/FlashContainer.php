@@ -4,7 +4,7 @@
  * @version    2.0
  * @author     Fuel Development Team
  * @license    MIT License
- * @copyright  2010 - 2014 Fuel Development Team
+ * @copyright  2010 - 2015 Fuel Development Team
  * @link       http://fuelphp.com
  */
 
@@ -25,10 +25,6 @@ const EXPIRE_ON_GET = 2;
 
 /**
  * Session Flash data container
- *
- * @package  Fuel\Session
- *
- * @since  2.0.0
  */
 class FlashContainer extends Container
 {
@@ -65,23 +61,22 @@ class FlashContainer extends Container
 	/**
 	 * @var  array  $states  list of valid flash expiry states
 	 */
-	protected $expiryStates = array(
+	protected $expiryStates = [
 		EXPIRE_ON_REQUEST,
 		EXPIRE_ON_GET,
-	);
+	];
 
 	/**
-	 * set session flash namespace
+	 * Sets session flash namespace
 	 *
-	 * @param  string  flash namespace
+	 * @param string $name
 	 *
-	 * @throws  \InvalidArgumentException
-	 *
-	 * @return  void
+	 * @throws \InvalidArgumentException
 	 */
 	public function setNamespace($name)
 	{
 		$name = $name ?: '';
+
 		if ( ! is_string($name))
 		{
 			throw new \InvalidArgumentException('Argument passed to setNamespace() must be a string value');
@@ -91,9 +86,7 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * set the default flash variable expiry to expire on next request
-	 *
-	 * @return  void
+	 * Sets the default flash variable expiry to expire on next request
 	 */
 	public function setExpiryOnRequest()
 	{
@@ -101,9 +94,7 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * set the default flash variable expiry to expire on first get
-	 *
-	 * @return  void
+	 * Sets the default flash variable expiry to expire on first get
 	 */
 	public function setExpiryOnGet()
 	{
@@ -111,13 +102,11 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * Check if a key was set upon this bag's data
+	 * Checks if a key was set upon this bag's data
 	 *
-	 * @param   string  $key
+	 * @param string $key
 	 *
-	 * @return  bool
-	 *
-	 * @since   2.0.0
+	 * @return boolean
 	 */
 	public function has($key)
 	{
@@ -127,11 +116,9 @@ class FlashContainer extends Container
 	/**
 	 * Reset the expiry state on the given key
 	 *
-	 * @param   string  $key
+	 * @param string $key
 	 *
-	 * @return  bool  true if reset, false if the given key doesn't exist
-	 *
-	 * @since   2.0.0
+	 * @return boolean
 	 */
 	public function keep($key)
 	{
@@ -145,13 +132,11 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * Get the expiry state on the given key
+	 * Returns the expiry state on the given key
 	 *
-	 * @param   string  $key
+	 * @param string $key
 	 *
-	 * @return  array  array with the key's expiration state flags, false if the given key doesn't exist
-	 *
-	 * @since   2.0.0
+	 * @return array
 	 */
 	public function expiration($key)
 	{
@@ -168,14 +153,12 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * Get a key's value from this bag's data
+	 * Returns a key's value from this bag's data
 	 *
-	 * @param   string  $key
-	 * @param   mixed   $default
+	 * @param string $key
+	 * @param mixed  $default
 	 *
-	 * @return  mixed
-	 *
-	 * @since   2.0.0
+	 * @return mixed
 	 */
 	public function get($key, $default = null)
 	{
@@ -209,15 +192,13 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * Set a config value
+	 * Sets a config value
 	 *
-	 * @param   string  $key
-	 * @param   mixed   $value
-	 * @param   int     $expiry  optional variable expiry override
+	 * @param string  $key
+	 * @param mixed   $value
+	 * @param integer $expiry
 	 *
 	 * @throws  \RuntimeException
-	 *
-	 * @since   2.0.0
 	 */
 	public function set($key, $value, $expiry = null)
 	{
@@ -244,13 +225,11 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * Delete data from the container
+	 * Deletes data from the container
 	 *
-	 * @param   string   $key  key to delete
+	 * @param string $key
 	 *
-	 * @return  boolean  delete success or failure
-	 *
-	 * @since   2.0.0
+	 * @return boolean
 	 */
 	public function delete($key)
 	{
@@ -262,13 +241,11 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * Replace the container's data.
+	 * Replaces the container's data
 	 *
-	 * @param   array  $data  new data
+	 * @param array $data
 	 *
-	 * @throws  RuntimeException
-	 *
-	 * @since   2.0.0
+	 * @throws \RuntimeException
 	 */
 	public function setContents(array $data)
 	{
@@ -303,11 +280,9 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * Get the container's data
+	 * Returns the container's data
 	 *
-	 * @return  array  container's data
-	 *
-	 * @since   2.0.0
+	 * @return array
 	 */
 	public function getContents()
 	{
@@ -329,11 +304,11 @@ class FlashContainer extends Container
 	}
 
 	/**
-	 * Prefix the container key with the flash namespace currently set
+	 * Prefixes the container key with the flash namespace currently set
 	 *
-	 * @param   string  $key
+	 * @param string $key
 	 *
-	 * @return   string  key
+	 * @return string
 	 */
 	protected function prefixKey($key)
 	{
