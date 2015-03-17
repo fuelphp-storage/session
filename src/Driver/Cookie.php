@@ -160,6 +160,14 @@ class Cookie extends Driver
 	/**
 	 * {@inheritdoc}
 	 */
+	public function gc()
+	{
+		return true;
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
 	public function destroy()
 	{
 		// we need to have a session started

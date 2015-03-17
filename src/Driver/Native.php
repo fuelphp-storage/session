@@ -170,6 +170,14 @@ class Native extends Driver
 	/**
 	 * {@inheritdoc}
 	 */
+	public function gc()
+	{
+		return true;
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
 	public function destroy()
 	{
 		// bail out if we don't have an active session

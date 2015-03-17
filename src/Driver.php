@@ -133,6 +133,13 @@ abstract class Driver
     abstract public function stop();
 
     /**
+     * Garbage collection
+     *
+     * @return boolean
+     */
+    abstract public function gc();
+
+    /**
      * Destroys the session
      *
      * @return boolean
