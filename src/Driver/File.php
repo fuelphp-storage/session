@@ -161,6 +161,15 @@ class File extends Driver
 			$this->sessionId
 		);
 
+		// Garbage collection
+		$this->gc();
+	}
+
+	/**
+	 * {@inheritdoc}
+	 */
+	public function gc()
+	{
 		// do some garbage collection
 		if (mt_rand(0,100) < $this->config['file']['gc_probability'])
 		{
